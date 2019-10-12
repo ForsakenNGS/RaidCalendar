@@ -1,0 +1,8 @@
+## Interface: 11302
+## Version: 1.0.0
+## Title: RaidCalendar
+## Notes: Raid planning
+## Author: Forsaken
+## SavedVariables: RaidCalendarDB
+
+RaidCalendar.xml
