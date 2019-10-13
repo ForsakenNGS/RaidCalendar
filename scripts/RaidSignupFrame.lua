@@ -4,7 +4,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale("RaidCalendar");
 RaidSignupFrame = AceGUI:Create("Frame");
 RaidSignupFrame:SetTitle(L["FRAME_SIGNUP_TITLE"]);
 RaidSignupFrame:SetLayout("Flow");
-RaidSignupFrame:SetWidth(480);
+RaidSignupFrame:SetWidth(520);
 RaidSignupFrame:SetHeight(380);
 
 function RaidSignupFrame:OnRaidChanged(widget, key)
@@ -65,11 +65,44 @@ function RaidSignupFrame:ShowTabOverview()
     infoBase:SetLayout("List");
     infoBase:AddChild(labelInstance);
     infoBase:AddChild(labelTimes);
+    -- Statistics
+    local infoStatsRoles = AceGUI:Create("SimpleGroup");
+    infoStatsRoles:SetFullWidth(true);
+    infoStatsRoles:SetLayout("Flow");
+    for roleName, roleCount in pairs(self.raidData.roleStats) do
+      local iconRole = AceGUI:Create("Icon");
+      iconRole:SetImage(RaidCalendar.roleIcons[roleName]);
+      iconRole:SetImageSize(16, 16);
+      iconRole:SetLabel(roleCount);
+      iconRole:SetWidth(32);
+      infoStatsRoles:AddChild(iconRole);
+    end
+    local infoStatsClasses = AceGUI:Create("SimpleGroup");
+    infoStatsClasses:SetFullWidth(true);
+    infoStatsClasses:SetLayout("Flow");
+    for className, classCount in pairs(self.raidData.classStats) do
+      local iconClass = AceGUI:Create("Icon");
+      iconClass:SetImage(RaidCalendar.classIcons[className]);
+      iconClass:SetImageSize(16, 16);
+      iconClass:SetLabel(classCount);
+      iconClass:SetWidth(32);
+      infoStatsClasses:AddChild(iconClass);
+    end
+    local infoStats = AceGUI:Create("SimpleGroup");
+    infoStats:SetWidth(300);
+    infoStats:SetLayout("List");
+    infoStats:AddChild(infoStatsRoles);
+    infoStats:AddChild(infoStatsClasses);
+    -- Detail text
     local infoDetails = AceGUI:Create("Label");
     infoDetails:SetText("|cffC0C0C0\n"..self.raidData.details);
+    infoDetails:SetFullWidth(true);
     infoDetails:SetHeight(24);
     infoDetails:SetFont("Fonts\\FRIZQT__.TTF", 12)
+    tabOverview:SetFullWidth(true);
+    tabOverview:SetLayout("Flow");
     tabOverview:AddChild(infoBase);
+    tabOverview:AddChild(infoStats);
     tabOverview:AddChild(infoDetails);
   end
   self.tabs:AddChild(tabOverview);
@@ -82,6 +115,11 @@ function RaidSignupFrame:ShowTabPlayers()
   labelNumber:SetWidth(32);
   labelNumber:SetHeight(24);
   labelNumber:SetFont("Fonts\\FRIZQT__.TTF", 14)
+  local labelStatus = AceGUI:Create("Label");
+  labelStatus:SetText("Status");
+  labelStatus:SetWidth(48);
+  labelStatus:SetHeight(24);
+  labelStatus:SetFont("Fonts\\FRIZQT__.TTF", 14)
   local labelCharacter = AceGUI:Create("Label");
   labelCharacter:SetText(L["FRAME_SIGNUP_CHAR"]);
   labelCharacter:SetWidth(140);
@@ -92,45 +130,53 @@ function RaidSignupFrame:ShowTabPlayers()
   labelRole:SetWidth(128);
   labelRole:SetHeight(24);
   labelRole:SetFont("Fonts\\FRIZQT__.TTF", 14)
+  local labelNotes = AceGUI:Create("Label");
+  labelNotes:SetText(L["FRAME_SIGNUP_NOTES"]);
+  labelNotes:SetWidth(128);
+  labelNotes:SetHeight(24);
+  labelNotes:SetFont("Fonts\\FRIZQT__.TTF", 14)
   local tableHeader = AceGUI:Create("SimpleGroup");
   tableHeader:SetLayout("Flow");
-  tableHeader:SetFullWidth(true);
+  tableHeader:SetWidth(476 + 16);
   tableHeader:SetHeight(32);
   tableHeader:AddChild(labelNumber);
+  tableHeader:AddChild(labelStatus);
   tableHeader:AddChild(labelCharacter);
   tableHeader:AddChild(labelRole);
+  tableHeader:AddChild(labelNotes);
   -- Player list
   local tableBody = AceGUI:Create("ScrollFrame");
   tableBody:SetLayout("List");
   tableBody:SetFullWidth(true);
   tableBody:SetFullHeight(true);
   if (self.raidData) then
-    local players = {};
-    players[1500] = { index = 2, char = "Test2", class = "MAGE", role = "CASTER" };
-    players[1400] = { index = 1, char = "Test1", class = "DRUID", role = "FLEX_TANK" };
-    players[2100] = { index = 3, char = "Test3", class = "PRIEST", role = "HEALER" };
-    players[1700] = { index = 5, char = "Test5", class = "WARLOCK", role = "CASTER" };
-    players[1000] = { index = 4, char = "Test4", class = "WARRIOR", role = "TANK" };
-    players[2110] = { index = 7, char = "Test7", class = "PALADIN", role = "HEALER" };
-    players[1400] = { index = 6, char = "Test6", class = "SHAMAN", role = "FLEX_HEAL" };
-    players[1800] = { index = 8, char = "Test8", class = "HUNTER", role = "AUTOATTACKER" };
-    players[500] = { index = 9, char = "Test9", class = "ROGUE", role = "HEALER" };
-
-    for signupTime, signupPlayer in pairs(players) do
+    local players = RaidCalendar:GetRaidSignups(self.raidData.id);
+    for signupIndex, signupPlayer in pairs(players) do
       local valueNumber = AceGUI:Create("Label");
-      valueNumber:SetText(signupPlayer.index);
+      valueNumber:SetText(signupIndex);
       valueNumber:SetWidth(32);
       valueNumber:SetFullHeight(true);
       valueNumber:SetFont("Fonts\\FRIZQT__.TTF", 14)
+      local valueStatus = AceGUI:Create("Label");
+      local valueStatusColor = RaidCalendar:GetColorHex(RaidCalendar.statusColors[signupPlayer.status]);
+      valueStatus:SetText(valueStatusColor..L["STATUS_SHORT_"..signupPlayer.status]);
+      valueStatus:SetWidth(48);
+      valueStatus:SetFullHeight(true);
+      valueStatus:SetFont("Fonts\\FRIZQT__.TTF", 10)
       local iconCharacter = AceGUI:Create("Icon");
-      iconCharacter:SetImage(RaidCalendar.classIcons[signupPlayer.class]);
+      if (signupPlayer.class) then
+        iconCharacter:SetImage(RaidCalendar.classIcons[signupPlayer.class]);
+      end
       iconCharacter:SetImageSize(16, 16);
       iconCharacter:SetHeight(24);
       iconCharacter:SetWidth(24);
       local valueCharacter = AceGUI:Create("InteractiveLabel");
-      local charColor = RaidCalendar.classColors[signupPlayer.class];
+      local charColor = RaidCalendar.classColors["WARRIOR"];
+      if (signupPlayer.class) then
+        charColor = RaidCalendar.classColors[signupPlayer.class];
+      end
       valueCharacter:SetColor(charColor.r, charColor.g, charColor.b);
-      valueCharacter:SetText(signupPlayer.char);
+      valueCharacter:SetText(signupPlayer.character);
       valueCharacter:SetWidth(116);
       valueCharacter:SetFullHeight(true);
       valueCharacter:SetFont("Fonts\\FRIZQT__.TTF", 14)
@@ -144,15 +190,22 @@ function RaidSignupFrame:ShowTabPlayers()
       valueRole:SetWidth(116);
       valueRole:SetFullHeight(true);
       valueRole:SetFont("Fonts\\FRIZQT__.TTF", 14)
+      local valueNotes = AceGUI:Create("InteractiveLabel");
+      valueNotes:SetText(signupPlayer.notes);
+      valueNotes:SetWidth(116);
+      valueNotes:SetFullHeight(true);
+      valueNotes:SetFont("Fonts\\FRIZQT__.TTF", 14)
       local tableRow = AceGUI:Create("SimpleGroup");
       tableRow:SetLayout("Flow");
-      tableRow:SetFullWidth(true);
+      tableRow:SetWidth(476 + 16);
       tableRow:SetHeight(16);
       tableRow:AddChild(valueNumber);
+      tableRow:AddChild(valueStatus);
       tableRow:AddChild(iconCharacter);
       tableRow:AddChild(valueCharacter);
       tableRow:AddChild(iconRole);
       tableRow:AddChild(valueRole);
+      tableRow:AddChild(valueNotes);
       tableBody:AddChild(tableRow);
     end
   end
@@ -204,9 +257,11 @@ function RaidSignupFrame:ShowTabSignup()
   signupRole:SetValue(roleDefault);
   signupRole:SetWidth(140);
   local signupNote = AceGUI:Create("MultiLineEditBox");
+  signupNote:SetLabel(L["FRAME_SIGNUP_NOTES"]);
   signupNote:SetText(noteDefault);
   signupNote:SetFullWidth(true);
   signupNote:SetNumLines(8);
+  signupNote.button:Hide();
   local btnSave = AceGUI:Create("Button");
   btnSave:SetText(L["FRAME_GENERIC_SAVE"]);
   btnSave:SetCallback("OnClick", function(widget)
@@ -244,9 +299,12 @@ function RaidSignupFrame:RefreshTab()
 end
 
 function RaidSignupFrame:OnSave(button, status, character, role, notes)
+  local charDetails = RaidCalendar.db.factionrealm.characters[character];
   RaidCalendar.db.factionrealm.characterDefault = character;
   RaidCalendar.db.factionrealm.roleDefault = role;
-  RaidCalendar:Signup(self.raidData.id, status, character, role, notes);
+  RaidCalendar:Signup(self.raidData.id, status, character, charDetails.level, charDetails.class, role, notes);
+  self:Hide();
+  RaidCalendarFrame:UpdateMonth();
 end
 
 function RaidSignupFrame:OnEdit(button)

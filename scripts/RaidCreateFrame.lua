@@ -87,6 +87,7 @@ local editComment = AceGUI:Create("EditBox");
 editComment:SetWidth(280);
 editComment:SetHeight(24);
 editComment:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnCommentChanged(widget, text) end);
+editComment:DisableButton(true);
 local editGroupRaid = AceGUI:Create("SimpleGroup");
 editGroupRaid:SetLayout("Flow");
 editGroupRaid:SetFullWidth(true);
@@ -101,6 +102,7 @@ local editDetails = AceGUI:Create("MultiLineEditBox");
 editDetails:SetFullWidth(true);
 editDetails:SetNumLines(8);
 editDetails:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnDetailsChanged(widget, text) end);
+editDetails.button:Hide();
 RaidCreateFrame.editDetails = editDetails;
 RaidCreateFrame:AddChild(editDetails);
 
@@ -202,6 +204,8 @@ function RaidCreateFrame:OnDetailsChanged(widget, value)
 end
 
 function RaidCreateFrame:OnSave(widget)
+  self.raidData.comment = self.editComment:GetText();
+  self.raidData.details = self.editDetails:GetText();
   if (self.raidData.id == nil) then
     -- Create raid
     self.raidData.id = RaidCalendar:AddRaid(

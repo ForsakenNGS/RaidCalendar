@@ -51,7 +51,7 @@ function RaidCalendar:OnInitialize()
   self.syncPeers = {
     guild = {}, players = {}
   };
-  self.timeStart = time();
+  self.timeStart = GetServerTime() - GetTime();
   self:Debug("ADDON INIT");
   -- OPTIONS
   self.options = LibStub("AceConfig-3.0"):RegisterOptionsTable(ADDON_NAME, self:InitOptions(), {"rc", "raidcal", "raidcalendar"});
@@ -69,6 +69,12 @@ function RaidCalendar:OnInitialize()
   self.statusOptions["UNSURE"] = L["STATUS_UNSURE"];
   self.statusOptions["NOT_AVAILABLE"] = L["STATUS_NOT_AVAILABLE"];
   self.statusOptions["LATE"] = L["STATUS_LATE"];
+  self.statusColors = {
+    	SIGNED_UP = { r = 0.45, g = 0.83, b = 0.45 },
+    	LATE = { r = 0.83, g = 0.83, b = 0.45 },
+    	UNSURE = { r = 1.0, g = 0.96, b = 0.41 },
+    	NOT_AVAILABLE = { r = 0.96, g = 0.20, b = 0.20 }
+  };
   self.roles = {};
   self.roles["TANK"] = L["ROLE_TANK"];
   self.roles["HEALER"] = L["ROLE_HEALER"];
@@ -103,7 +109,7 @@ function RaidCalendar:OnInitialize()
     CASTER = "interface\\icons\\inv_staff_06",
     AUTOATTACKER = "interface\\icons\\inv_sword_25",
     HEALER = "interface\\icons\\spell_nature_healingtouch",
-    FLEX_TANK = "interface\\icons\\talentspec_druid_feral_bear.png",
+    FLEX_TANK = "interface\\icons\\ability_racial_bearform.png",
     FLEX_HEAL = "interface\\icons\\spell_nature_healingwavelesser"
   };
   -- EVENTS
@@ -459,10 +465,11 @@ function RaidCalendar:DeleteRaid(id)
   return true;
 end
 
-function RaidCalendar:Signup(raidId, status, character, role, notes)
+function RaidCalendar:Signup(raidId, status, character, level, class, role, notes)
   local timestamp = self:GetTime();
   self:AddAction(timestamp, { type = "raidSignup", id = raidId, data = {
-    status = status, character = character, role = role, notes = notes
+    status = status, notes = notes,
+    character = character, level = level, class = class, role = role
   } });
   self:SyncBroadcast(timestamp, "GUILD");
   self.queueReparse = true;
@@ -482,6 +489,17 @@ end
 
 function RaidCalendar:GetRaidDetails(raidId)
   return self.db.factionrealm.raids[raidId];
+end
+
+function RaidCalendar:GetRaidSignups(raidId)
+  local signupsSorted = {};
+  for charName, charSignup in pairs(self.db.factionrealm.raids[raidId].signups) do
+    tinsert(signupsSorted, charSignup);
+  end
+  sort(signupsSorted, function(a, b)
+    return a.ackTime < b.ackTime;
+  end);
+  return signupsSorted;
 end
 
 function RaidCalendar:ParseActionLog()
@@ -510,6 +528,27 @@ function RaidCalendar:ParseActionLog()
         end
         self.queueReparse = true;
         return;
+      end
+    end
+  end
+  -- Process raid data
+  for raidId, raidData in orderedpairs(self.db.factionrealm.raids) do
+    raidData.classStats = {};
+    for className, classColor in pairs(self.classColors) do
+      raidData.classStats[className] = 0;
+    end
+    raidData.roleStats = {};
+    for roleName, roleLabel in pairs(self.roles) do
+      raidData.roleStats[roleName] = 0;
+    end
+    for charName, signupData in pairs(raidData.signups) do
+      if (signupData.status == "SIGNED_UP") or (signupData.status == "LATE") then
+        if (signupData.class) then
+          raidData.classStats[signupData.class] = raidData.classStats[signupData.class] + 1;
+        end
+        if (signupData.role) then
+          raidData.roleStats[signupData.role] = raidData.roleStats[signupData.role] + 1;
+        end
       end
     end
   end
@@ -557,9 +596,14 @@ function RaidCalendar:ParseActionEntry(timestamp, action)
       end
     end
   elseif (action.type == "raidSignupAck") then
-    for charIndex, charName in pairs(action.characters) do
-      self.db.factionrealm.raids[action.id].signups[charName].ack = true;
-      self.db.factionrealm.raids[action.id].signups[charName].ackTime = timestamp;
+    local raid = self.db.factionrealm.raids[action.id];
+    if raid then
+      for charIndex, charName in ipairs(action.characters) do
+        if raid.signups[charName] then
+          raid.signups[charName].ack = true;
+          raid.signups[charName].ackTime = timestamp;
+        end
+      end
     end
   end
 end
