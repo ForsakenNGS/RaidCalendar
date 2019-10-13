@@ -47,6 +47,7 @@ end
 function RaidCalendar:OnInitialize()
   -- DATABASE / STORAGE
   self.db = LibStub("AceDB-3.0"):New(ADDON_DB_NAME, self:GetDefaultOptions());
+  self:CheckDbIntegrity();
   self.frames = {};
   self.syncPeers = {
     guild = {}, players = {}
@@ -125,6 +126,15 @@ function RaidCalendar:OnInitialize()
   self.queueFrame:SetScript("OnUpdate", function()
     RaidCalendar:QueueUpdate();
   end);
+end
+
+function RaidCalendar:CheckDbIntegrity()
+  local dataVersion = 2;
+  if not self.db.factionrealm.dataVersion or self.db.factionrealm.dataVersion < dataVersion then
+    self.db.factionrealm.dataVersion = dataVersion;
+    self.db.factionrealm.actionLog = {};
+    self.db.factionrealm.raids = {};
+  end
 end
 
 function RaidCalendar:QueueUpdate()
