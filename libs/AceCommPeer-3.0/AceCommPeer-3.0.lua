@@ -181,7 +181,7 @@ end
 
 function AceCommPeer:SyncRequestPackets(ids, distribution, target)
   local messageData = { type = "SyncRequest", packetIds = ids };
-  self:SyncSend(messageData, "WHISPER", target);
+  self:SyncSend(messageData, distribution, target);
 end
 
 function AceCommPeer:SyncBroadcastPackets(ids)
@@ -205,7 +205,7 @@ function AceCommPeer:SyncSendPackets(ids, distribution, target)
   for index, id in ipairs(ids) do
     messageData.packets[id] = self.syncDb.factionrealm.packets[id];
   end
-  self:SyncSend(messageData, "WHISPER", target);
+  self:SyncSend(messageData, distribution, target);
 end
 
 function AceCommPeer:SyncConfirm(id, packet)
@@ -278,11 +278,11 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       end
       if #(packetsMissingLocal) > 0 then
         -- Request missing actions from peer
-        self:SyncRequestPackets(packetsMissingLocal, distribution, sender);
+        self:SyncRequestPackets(packetsMissingLocal, "WHISPER", sender);
       end
       if #(packetsMissingRemote) > 0 then
         -- Send missing actions to peer
-        self:SyncSendPackets(packetsMissingRemote, distribution, sender);
+        self:SyncSendPackets(packetsMissingRemote, "WHISPER", sender);
       end
     elseif (messageData.type == "SyncRequest") then
       self:SyncSendPackets(messageData.packetIds, sender);
@@ -338,7 +338,7 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
     self.syncDb.factionrealm.characters[charName].class = classFilename;
 		self:SyncPeers();
   end
-  if (eventName == "GUILD_ROSTER_UPDATE") then
+  if (eventName == "PLAYER_ENTERING_WORLD") or (eventName == "GUILD_ROSTER_UPDATE") then
 		-- Update guild members online
 		for guildIndex = 1, GetNumGuildMembers() do
 			local name, rankName, rankIndex, level, classDisplayName,
@@ -349,7 +349,7 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
 			end
 		end
   end
-  if (eventName == "FRIENDLIST_UPDATE") then
+  if (eventName == "PLAYER_ENTERING_WORLD") or (eventName == "FRIENDLIST_UPDATE") then
 		-- Update friends online
 		for friendIndex = 1, C_FriendList.GetNumFriends() do
 			local friend = C_FriendList.GetFriendInfoByIndex(friendIndex);
@@ -359,17 +359,6 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
 			end
 		end
   end
-  if (eventName == "GUILD_ROSTER_UPDATE") then
-		-- Update guild members online
-		for guildIndex = 1, GetNumGuildMembers() do
-			local name, rankName, rankIndex, level, classDisplayName,
-				zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
-			if (self.syncDb.factionrealm.peers[charName]) then
-				self.syncDb.factionrealm.peers[charName].online = isOnline;
-				self.syncDb.factionrealm.peers[charName].guild = true;
-			end
-		end
-	end
 end
 
 ----------------------------------------
