@@ -333,7 +333,7 @@ function RaidCalendar:ParseActionLog()
       if #(signupAcks) > 0 then
         local timestamp = self:GetSyncTime();
         self:AddSyncPacket("raidSignupAck", { raidId = raidId, characters = signupAcks });
-        self.queueReparse = true;
+        self:OnSyncPacketsChanged();
         return;
       end
     end
