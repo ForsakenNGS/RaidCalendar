@@ -178,6 +178,15 @@ function RaidCreateFrame:SetDateStr(dateStr)
   else
     self:SetTitle(dateStr.." - "..L["FRAME_CREATE_TITLE_EDIT"]);
   end
+  self.raidData.expires = nil;
+  local expires = nil;
+  local raidYear, raidMonth, raidDay = strmatch(dateStr, "^(%d)+\\-(%d)+\\-(%d)+$");
+  if (raidDay) then
+    self.raidData.expires = time({
+      year = raidYear, month = raidMonth, day = raidDay,
+      hour = 0, min = 0, sec = 0, isdst = true
+    }) + 86400 * 7; -- Expires 7 days after the raid
+  end
 end
 
 function RaidCreateFrame:OnInviteChanged(widget, value)
@@ -210,14 +219,14 @@ function RaidCreateFrame:OnSave(widget)
   if (self.raidData.id == nil) then
     -- Create raid
     self.raidData.id = RaidCalendar:AddRaid(
-      self.raidData.dateStr, UnitName("player"),
+      self.raidData.dateStr, self.raidData.expires, UnitName("player"),
       self.raidData.timeInvite, self.raidData.timeStart, self.raidData.timeEnd,
       self.raidData.instance, self.raidData.comment, self.raidData.details
     );
   else
     -- Create raid
     RaidCalendar:UpdateRaid(
-      self.raidData.id, self.raidData.dateStr, self.raidData.createdBy,
+      self.raidData.id, self.raidData.dateStr, self.raidData.expires, self.raidData.createdBy,
       self.raidData.timeInvite, self.raidData.timeStart, self.raidData.timeEnd,
       self.raidData.instance, self.raidData.comment, self.raidData.details
     );

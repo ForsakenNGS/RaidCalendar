@@ -1,7 +1,7 @@
 local ADDON_NAME = "RaidCalendar";
 local ADDON_DB_NAME = "RaidCalendarDB";
 
-RaidCalendar = LibStub("AceAddon-3.0"):NewAddon(ADDON_NAME, "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceSerializer-3.0");
+RaidCalendar = LibStub("AceAddon-3.0"):NewAddon(ADDON_NAME, "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceCommPeer-3.0", "AceSerializer-3.0");
 local L = LibStub("AceLocale-3.0"):GetLocale("RaidCalendar");
 
 local function clonetable(t, deep)
@@ -47,12 +47,9 @@ end
 function RaidCalendar:OnInitialize()
   -- DATABASE / STORAGE
   self.db = LibStub("AceDB-3.0"):New(ADDON_DB_NAME, self:GetDefaultOptions());
-  self:CheckDbIntegrity();
+	self.syncDb = self.db:RegisterNamespace("PeerSync", self:GetSyncDbDefaults());
   self.frames = {};
-  self.syncPeers = {
-    guild = {}, players = {}
-  };
-  self.timeStart = GetServerTime() - GetTime();
+  self.actionLog = self:GetSyncPacketsSorted();
   self:Debug("ADDON INIT");
   -- OPTIONS
   self.options = LibStub("AceConfig-3.0"):RegisterOptionsTable(ADDON_NAME, self:InitOptions(), {"rc", "raidcal", "raidcalendar"});
@@ -114,11 +111,8 @@ function RaidCalendar:OnInitialize()
     FLEX_HEAL = "interface\\icons\\spell_nature_healingwavelesser"
   };
   -- EVENTS
-  self:RegisterComm(ADDON_NAME, "OnCommReceived")
-  self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent");
-  self:RegisterEvent("GUILD_ROSTER_UPDATE", "OnEvent");
+  self:RegisterMessage("SYNC_PACKETS_CHANGED", "OnActionLogChanged")
   -- QUEUED Actions
-  self.queueSyncPeerUpdate = false;
   self.queueReparse = true;
   self.queueChatReport = true;
   self.queueStartup = true;
@@ -128,22 +122,8 @@ function RaidCalendar:OnInitialize()
   end);
 end
 
-function RaidCalendar:CheckDbIntegrity()
-  local dataVersion = 2;
-  if not self.db.factionrealm.dataVersion or self.db.factionrealm.dataVersion < dataVersion then
-    self.db.factionrealm.dataVersion = dataVersion;
-    self.db.factionrealm.actionLog = {};
-    self.db.factionrealm.raids = {};
-  end
-end
-
 function RaidCalendar:QueueUpdate()
-  if (self.queueSyncPeerUpdate) then
-    -- Update sync peers
-    self.queueSyncPeerUpdate = false;
-    self:UpdateSyncPeers(true);
-    return;
-  elseif (self.queueReparse) then
+  if (self.queueReparse) then
     -- Re-Parse log
     self.queueReparse = false;
     self:ParseActionLog();
@@ -174,197 +154,9 @@ function RaidCalendar:CanEditRaids()
   --return CanEditMOTD();
 end
 
-function RaidCalendar:GetTime()
-  return self.timeStart + GetTime();
-end
-
---------------------------------------------------------------------------------
--- Handle addon events                                                         --
---------------------------------------------------------------------------------
-function RaidCalendar:OnCommReceived(prefix, message, distribution, sender)
-  if (prefix == ADDON_NAME) then
-    local valid, package = self:Deserialize(message);
-    if (not valid) then
-      self:Debug("OnCommReceived @ "..prefix.." / "..message);
-      return;
-    end
-    if (package.type == "SyncReport") then
-      local actionsKnownLocal = {};
-      local actionsMissingLocal = {};
-      local actionsMissingRemote = {};
-      for timestamp, action in orderedpairs(self.db.factionrealm.actionLog) do
-        tinsert(actionsKnownLocal, timestamp);
-        if not tContains(package.known, timestamp) then
-          tinsert(actionsMissingRemote, timestamp);
-        end
-      end
-      for index, timestamp in ipairs(package.known) do
-        if not tContains(actionsKnownLocal, timestamp) then
-          tinsert(actionsMissingLocal, timestamp);
-        end
-      end
-      if #(actionsMissingLocal) > 0 then
-        -- Request missing actions from peer
-        self:SyncRequestActions(actionsMissingLocal, sender);
-      end
-      if #(actionsMissingRemote) > 0 then
-        -- Send missing actions to peer
-        self:SyncSendActions(actionsMissingRemote, sender);
-      end
-    elseif (package.type == "SyncRequest") then
-      self:SyncSendActions(package.actions, sender);
-    elseif (package.type == "SyncData") then
-      for timestamp, action in orderedpairs(package.actions) do
-        if (self.db.factionrealm.actionLog[timestamp] == nil) then
-          self:AddActionRemote(timestamp, action, sender);
-        end
-      end
-      self.queueReparse = true;
-    elseif (package.type == "SyncConfirm") then
-      self:SyncSend({ type = "SyncAck", timetamp = package.timestamp }, "WHISPER", sender);
-    elseif (package.type == "SyncPing") then
-      self:SyncSend({ type = "SyncPong", time = self:GetTime() }, "WHISPER", sender);
-    elseif (package.type == "SyncPong") then
-      self:AddSyncPeer(sender, distribution);
-    end
-  end
-end
-
-function RaidCalendar:SyncSend(package, distribution, target)
-  -- Validate
-  if not package.type then
-    self:Debug("Invalid package! (no type specified)");
-    return;
-  end
-  -- Serialize and send
-  local message = self:Serialize(package);
-  self:SendCommMessage(ADDON_NAME, message, distribution, target);
-  -- Debugging
-  if (target == nil) then
-    target = "nil";
-  end
-  self:Debug(package.type.." @ "..distribution.." / "..target..": "..message);
-end
-
-function RaidCalendar:SyncReport(distribution, target)
-  local package = { type = "SyncReport", known = {} };
-  for timestamp, action in orderedpairs(self.db.factionrealm.actionLog) do
-    tinsert(package.known, timestamp);
-  end
-  self:SyncSend(package, distribution, target);
-end
-
-function RaidCalendar:SyncBroadcast(timestamp, distribution, target)
-  local package = { type = "SyncData", actions = {} };
-  package.actions[timestamp] = self.db.factionrealm.actionLog[timestamp];
-  self:SyncSend(package, distribution, target);
-end
-
-function RaidCalendar:SyncRequestActions(missingActions, user)
-  local package = { type = "SyncRequest", actions = missingActions };
-  self:SyncSend(package, "WHISPER", user);
-end
-
-function RaidCalendar:SyncSendActions(missingActions, user)
-  local package = { type = "SyncData", actions = {} };
-  for index, timestamp in ipairs(missingActions) do
-    package.actions[timestamp] = self.db.factionrealm.actionLog[timestamp];
-  end
-  self:SyncSend(package, "WHISPER", user);
-end
-
-function RaidCalendar:SyncConfirm(timestamp, action)
-  local knownAction = self.db.factionrealm.actionLog[timestamp];
-  if (self:Serialize(action.data) == self:Serialize(knownAction.data)) then
-    local package = { type = "SyncConfirm", action = action, timestamp = timestamp };
-    self:SyncSend(package, "WHISPER", action.character);
-  end
-end
-
-function RaidCalendar:AddSyncPeer(charName, distribution)
-  if self.syncPeers.guild[charName] then
-    self.syncPeers.guild[charName].online = true;
-    return;
-  end
-  if self.syncPeers.players[charName] then
-    self.syncPeers.players[charName].online = true;
-    return;
-  end
-  if (distribution == "GUILD") then
-    -- Unknown guild player - force update now!
-    self.queueSyncPeerUpdate = true;
-    return;
-  end
-  -- New non-guild player
-  self.syncPeers.players[charName] = {
-    online = true
-  };
-end
-
-function RaidCalendar:IsSyncPeerAvailable(charName)
-  if self.syncPeers.guild[charName] then
-    return self.syncPeers.guild[charName].online;
-  end
-  if self.syncPeers.players[charName] then
-    return self.syncPeers.players[charName].online;
-  end
-  -- Check if online
-  self.syncPeers.players[charName] = {
-    online = false
-  };
-  self:SyncSend({ type = "SyncPing", time = self:GetTime() }, "WHISPER", charName);
-  return false;
-end
-
-function RaidCalendar:UpdateSyncPeers(force)
-  local timeNow = self:GetTime();
-  local updateInterval = 300;
-  local lastUpdate = self.syncPeers.lastUpdate;
-  if force or not lastUpdate or (timeNow - lastUpdate) >= updateInterval then
-    self.syncPeers.lastUpdate = timeNow;
-    self.syncPeers.guild = {};
-    -- Update guild members online
-    for guildIndex = 1, GetNumGuildMembers() do
-      local name, rankName, rankIndex, level, classDisplayName,
-        zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
-      if (isOnline) then
-        -- Player is online
-        local charName, realm = strsplit("-", name);
-        self.syncPeers.guild[charName] = {
-          online = true, rankIndex = rankIndex, level = level, class = class
-        };
-      elseif self.syncPeers.guild[charName] then
-        -- Player no longer online
-        self.syncPeers.guild[charName].online = false;
-      end
-    end
-    -- Update players
-    self:Debug("Updated Sync-Peers");
-  end
-end
-
 --------------------------------------------------------------------------------
 -- Handle game events                                                         --
 --------------------------------------------------------------------------------
-function RaidCalendar:OnEvent(eventName, ...)
-  if (eventName == "PLAYER_ENTERING_WORLD") then
-    local charName = UnitName("player");
-    if (self.db.factionrealm.characters[charName] == nil) then
-      self.db.factionrealm.characters[charName] = {
-        name = charName, level = 0, class = ""
-      };
-    end
-    local charLevel = UnitLevel("player");
-    local className, classFilename, classID = UnitClass("player");
-    self.db.factionrealm.characters[charName].level = charLevel;
-    self.db.factionrealm.characters[charName].class = classFilename;
-    self:SyncReport("GUILD");
-  end
-  if (eventName == "GUILD_ROSTER_UPDATE") then
-    self.queueSyncPeerUpdate = true;
-  end
-end
-
 function RaidCalendar:OnEnable()
   self:Debug("ADDON ENABLE");
   -- TODO
@@ -399,90 +191,43 @@ function RaidCalendar:Debug(...)
   end
 end
 
-function RaidCalendar:AddAction(timestamp, action, character)
-  if (not character) then
-    character = UnitName("player");
-  end
-  self.db.factionrealm.actionLog[timestamp] = action;
-  self.db.factionrealm.actionLog[timestamp].character = character;
-  self.db.factionrealm.actionLog[timestamp].source = character;
-  self.db.factionrealm.actionLog[timestamp].confirmed = false;
-  -- Update confirmation
-  self:UpdateActionConfirmation(timestamp);
-end
+--------------------------------------------------------------------------------
+-- Raid management                                                            --
+--------------------------------------------------------------------------------
 
-function RaidCalendar:AddActionRemote(timestamp, action, source)
-  for charName, charDetails in pairs(RaidCalendar.db.factionrealm.characters) do
-    if (action.character == charName) then
-      -- Ignore own actions
-      return;
-    end
-  end
-  self.db.factionrealm.actionLog[timestamp] = action;
-  self.db.factionrealm.actionLog[timestamp].source = source;
-  self.db.factionrealm.actionLog[timestamp].confirmed = false;
-  -- Update confirmation
-  self:UpdateActionConfirmation(timestamp);
-end
-
-function RaidCalendar:AddRaid(dateStr, createdBy, timeInvite, timeStart, timeEnd, instance, comment, details)
-  local id = floor(self:GetTime() * 1000);
-  local timestamp = self:GetTime();
-  self:AddAction(timestamp, { type = "raidCreate", id = id, data = {
+function RaidCalendar:AddRaid(dateStr, expires, createdBy, timeInvite, timeStart, timeEnd, instance, comment, details)
+  -- (type, data, timestamp, expires, source, packetId, verified)
+  local id = self:AddSyncPacket("raidCreate", {
     dateStr = dateStr, createdBy = createdBy,
     timeInvite = timeInvite, timeStart = timeStart, timeEnd = timeEnd,
     instance = instance, comment = comment, details = details
-  } });
-  self:SyncBroadcast(timestamp, "GUILD");
-  self.queueReparse = true;
+  }, nil, expires );
+  self:OnSyncPacketsChanged();
   return id;
 end
 
-function RaidCalendar:UpdateActionConfirmation(timestamp)
-  local action = self.db.factionrealm.actionLog[timestamp];
-  if (not action) then
-    return;
-  end
-  if (action.confirmed) then
-    return;
-  end
-  if (action.character == action.source) then
-    action.confirmed = true;
-    return;
-  end
-  if (self:IsSyncPeerAvailable(action.character)) then
-    self:SyncConfirm(timestamp, action);
-  end
-end
-
-function RaidCalendar:UpdateRaid(id, dateStr, createdBy, timeInvite, timeStart, timeEnd, instance, comment, details)
-  local timestamp = self:GetTime();
-  self:AddAction(timestamp, { type = "raidUpdate", id = id, data = {
-    dateStr = dateStr, createdBy = createdBy,
+function RaidCalendar:UpdateRaid(id, dateStr, expires, createdBy, timeInvite, timeStart, timeEnd, instance, comment, details)
+  self:AddSyncPacket("raidUpdate", {
+    id = id, dateStr = dateStr, createdBy = createdBy,
     timeInvite = timeInvite, timeStart = timeStart, timeEnd = timeEnd,
     instance = instance, comment = comment, details = details
-  } });
-  self:SyncBroadcast(timestamp, "GUILD");
-  self.queueReparse = true;
+  });
+  self:OnSyncPacketsChanged();
   return true;
 end
 
 function RaidCalendar:DeleteRaid(id)
-  local timestamp = self:GetTime();
-  self:AddAction(timestamp, { type = "raidDelete", id = id });
-  self:SyncBroadcast(timestamp, "GUILD");
-  self.queueReparse = true;
+  self:AddSyncPacket("raidDelete", { id = id });
+  self:OnSyncPacketsChanged();
   return true;
 end
 
 function RaidCalendar:Signup(raidId, status, character, level, class, role, notes)
-  local timestamp = self:GetTime();
-  self:AddAction(timestamp, { type = "raidSignup", id = raidId, data = {
-    status = status, notes = notes,
+  self:AddSyncPacket("raidSignup", {
+    raidId = raidId, status = status, notes = notes,
     character = character, level = level, class = class, role = role
-  } });
-  self:SyncBroadcast(timestamp, "GUILD");
-  self.queueReparse = true;
+  });
+  self:OnSyncPacketsChanged();
   return true;
 end
 
@@ -512,13 +257,29 @@ function RaidCalendar:GetRaidSignups(raidId)
   return signupsSorted;
 end
 
+function RaidCalendar:IsOwnRaid(raidData)
+  for charName, charDetails in pairs(RaidCalendar.db.factionrealm.characters) do
+    if (raidData.createdBy == charName) then
+      return true;
+    end
+  end
+  return false;
+end
+
+--------------------------------------------------------------------------------
+-- Handle synchronisation                                                     --
+--------------------------------------------------------------------------------
+
+function RaidCalendar:OnActionLogChanged(message, actions)
+  self.actionLog = actions;
+  self.queueReparse = true;
+end
+
 function RaidCalendar:ParseActionLog()
-  -- Order log
-  self.db.factionrealm.actionLog = orderedtable(self.db.factionrealm.actionLog)
   -- Parse log
   self.db.factionrealm.raids = {};
-  for timestamp, action in orderedpairs(self.db.factionrealm.actionLog) do
-    self:ParseActionEntry(timestamp, action);
+  for index, action in orderedpairs(self.actionLog) do
+    self:ParseActionEntry(index, action);
   end
   -- Check unverified raid signups
   local acksSent = false;
@@ -532,10 +293,7 @@ function RaidCalendar:ParseActionLog()
       end
       if #(signupAcks) > 0 then
         local timestamp = self:GetTime();
-        if (not self.db.factionrealm.actionLog[timestamp]) then
-          self:AddAction(timestamp, { type = "raidSignupAck", id = raidId, characters = signupAcks });
-          self:SyncBroadcast(timestamp, "GUILD");
-        end
+        self:AddSyncPacket("raidSignupAck", { raidId = raidId, characters = signupAcks });
         self.queueReparse = true;
         return;
       end
@@ -566,16 +324,7 @@ function RaidCalendar:ParseActionLog()
   RaidCalendarFrame:UpdateMonth();
 end
 
-function RaidCalendar:IsOwnRaid(raidData)
-  for charName, charDetails in pairs(RaidCalendar.db.factionrealm.characters) do
-    if (raidData.createdBy == charName) then
-      return true;
-    end
-  end
-  return false;
-end
-
-function RaidCalendar:ParseActionEntry(timestamp, action)
+function RaidCalendar:ParseActionEntry(index, action)
   --self:Debug(timestamp, action.type);
   if (action.type == "raidCreate") then
     -- Insert the raid
@@ -584,29 +333,29 @@ function RaidCalendar:ParseActionEntry(timestamp, action)
     self.db.factionrealm.raids[action.id].signedUp = false;
     self.db.factionrealm.raids[action.id].signups = {};
   elseif (action.type == "raidUpdate") then
-    action.data.id = action.id;
+    local raidId = action.data.id;
     -- Keep signups
-    local signedUp = self.db.factionrealm.raids[action.id].signedUp;
-    local signups = self.db.factionrealm.raids[action.id].signups;
+    local signedUp = self.db.factionrealm.raids[raidId].signedUp;
+    local signups = self.db.factionrealm.raids[raidId].signups;
     -- Update the rest
-    self.db.factionrealm.raids[action.id] = clonetable(action.data);
-    self.db.factionrealm.raids[action.id].signedUp = signedUp;
-    self.db.factionrealm.raids[action.id].signups = signups;
+    self.db.factionrealm.raids[raidId] = clonetable(action.data);
+    self.db.factionrealm.raids[raidId].signedUp = signedUp;
+    self.db.factionrealm.raids[raidId].signups = signups;
   elseif (action.type == "raidDelete") then
     -- Update the rest
-    self.db.factionrealm.raids[action.id] = nil;
+    self.db.factionrealm.raids[action.data.id] = nil;
   elseif (action.type == "raidSignup") then
     local playerName = UnitName("player");
-    if (self.db.factionrealm.raids[action.id] ~= nil) then
+    if (self.db.factionrealm.raids[action.data.raidId] ~= nil) then
       -- Raid exists, add/update signup
-      self.db.factionrealm.raids[action.id].signups[action.data.character] = clonetable(action.data);
-      self.db.factionrealm.raids[action.id].signups[action.data.character].ack = false;
+      self.db.factionrealm.raids[action.data.raidId].signups[action.data.character] = clonetable(action.data);
+      self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].ack = false;
       if (action.data.character == playerName) then
-        self.db.factionrealm.raids[action.id].signedUp = self.db.factionrealm.raids[action.id].signups[action.data.character];
+        self.db.factionrealm.raids[action.data.raidId].signedUp = self.db.factionrealm.raids[action.data.raidId].signups[playerName];
       end
     end
   elseif (action.type == "raidSignupAck") then
-    local raid = self.db.factionrealm.raids[action.id];
+    local raid = self.db.factionrealm.raids[action.data.raidId];
     if raid then
       for charIndex, charName in ipairs(action.characters) do
         if raid.signups[charName] then
@@ -618,6 +367,10 @@ function RaidCalendar:ParseActionEntry(timestamp, action)
   end
 end
 
+--------------------------------------------------------------------------------
+-- Options                                                                    --
+--------------------------------------------------------------------------------
+
 function RaidCalendar:GetDefaultOptions()
   return {
     char = {
@@ -625,7 +378,6 @@ function RaidCalendar:GetDefaultOptions()
     },
     factionrealm = {
       characters = {},
-      actionLog = {},
       raids = {},
       raidDefaults = {
         dateStr = "---", timeInvite = "18:30", timeStart = "19:00", timeEnd = "22:00",
