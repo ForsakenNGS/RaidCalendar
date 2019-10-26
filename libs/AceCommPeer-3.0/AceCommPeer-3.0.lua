@@ -11,7 +11,7 @@
 
 --[[ AceCommPeer-3.0
 
-TODO: Add some todo's (that definitly exist ;-) )
+TODO: Update sync peers by fiend list updates
 
 ]]
 
@@ -24,6 +24,29 @@ local AceCommPeer, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 if not AceCommPeer then return end
 
 AceCommPeer.embeds = AceCommPeer.embeds or {};
+
+local function serializeTable(val, name, skipnewlines, depth)
+    skipnewlines = skipnewlines or false
+    depth = depth or 0
+    local tmp = string.rep(" ", depth)
+    if name then tmp = tmp .. name .. " = " end
+    if type(val) == "table" then
+        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
+        for k, v in pairs(val) do
+            tmp =  tmp .. serializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+        end
+        tmp = tmp .. string.rep(" ", depth) .. "}"
+    elseif type(val) == "number" then
+        tmp = tmp .. tostring(val)
+    elseif type(val) == "string" then
+        tmp = tmp .. string.format("%q", val)
+    elseif type(val) == "boolean" then
+        tmp = tmp .. (val and "true" or "false")
+    else
+        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+    end
+    return tmp
+end
 
 function AceCommPeer:RegisterChannel(channel)
 	if (not tContains(AceCommPeer.syncChannels, channel)) then
@@ -73,9 +96,15 @@ function AceCommPeer:AddSyncPacket(type, data, timestamp, expires, source, packe
 		data = data, source = source, sender = sender, verified = verified,
 		extra = {}
 	};
+	-- Debug
 	self.syncDb.factionrealm.packets[packetId] = packet;
 	self:Print("Added packet: "..packetId);
 	self:Print("Next id: "..self.syncDb.char.messageId);
+	-- Broadcast if own
+	if (sender == charName) then
+		self:SyncBroadcastPackets({ packetId });
+	end
+	-- Return packet id
 	return packetId;
 end
 
@@ -112,7 +141,11 @@ function AceCommPeer:SyncPeers()
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
 			-- Whisper peers (friends?)
-			--TODO self:SyncPeer(channel, charName);
+			for charName, syncPeer in pairs(self.syncPeers) do
+				if (not syncPeer.guild) then
+					self:SyncPeer("WHISPER", charName);
+				end
+			end
 		else
 			-- Group peers (guild, raid, etc.)
 			self:SyncPeer(channel);
@@ -142,6 +175,22 @@ end
 function AceCommPeer:SyncRequestPackets(ids, distribution, target)
   local messageData = { type = "SyncRequest", packetIds = ids };
   self:SyncSend(messageData, "WHISPER", target);
+end
+
+function AceCommPeer:SyncBroadcastPackets(ids)
+	for index, channel in ipairs(self.syncChannels) do
+		if (channel == "WHISPER") then
+			-- Whisper peers (friends?)
+			for charName, syncPeer in pairs(self.syncPeers) do
+				if (not syncPeer.guild) then
+					self:SyncSendPackets(ids, "WHISPER", charName);
+				end
+			end
+		else
+			-- Group peers (guild, raid, etc.)
+			self:SyncSendPackets(ids, "GUILD");
+		end
+	end
 end
 
 function AceCommPeer:SyncSendPackets(ids, distribution, target)
@@ -200,7 +249,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
   if (prefix == self.syncCommName) then
     local valid, messageData = self:Deserialize(message);
     if (not valid) then
-      self:Debug("OnCommReceived @ "..prefix.." / "..message);
+      self:Debug("OnCommReceived @ "..prefix.." / "..serializeTable(messageData));
       return;
     end
     self:SyncPeerAdd(sender, distribution);
@@ -262,7 +311,6 @@ end
 
 function AceCommPeer:OnSyncPacketsChanged()
 	self:SendMessage("SYNC_PACKETS_CHANGED", self:GetSyncPacketsSorted());
-
 end
 
 --------------------------------------------------------------------------------
@@ -310,6 +358,8 @@ local mixins = {
 	"SyncConfirm",
 	"SyncPeerAdd",
 	"SyncPeerAvailable",
+	"SyncBroadcastPackets",
+	"SyncSendPackets",
 	"OnSyncPacketsChanged",
 	"OnEventCommPeer",
 	"OnCommReceivedPeer"
@@ -331,7 +381,6 @@ function AceCommPeer:Embed(target)
   -- EVENTS
   target:RegisterComm(target.syncCommName, "OnCommReceivedPeer")
   target:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEventCommPeer");
-  target:RegisterEvent("GUILD_ROSTER_UPDATE", "OnEventCommPeer");
 	self.embeds[target] = true;
 	return target;
 end
