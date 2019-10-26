@@ -137,6 +137,10 @@ function AceCommPeer:GetSyncPacketsSorted()
 	return packetsSorted;
 end
 
+function AceCommPeer:SyncDebug(message)
+	self:SendMessage("SYNC_DEBUG", message);
+end
+
 function AceCommPeer:SyncPeers()
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
@@ -156,6 +160,7 @@ end
 function AceCommPeer:SyncPeer(distribution, target)
   local messageData = { type = "SyncReport", known = {} };
   for id, packet in orderedpairs(self.syncDb.factionrealm.packets) do
+  for id, packet in pairs(self.syncDb.factionrealm.packets) do
     tinsert(messageData.known, id);
   end
   self:SyncSend(messageData, distribution, target);
@@ -169,7 +174,7 @@ function AceCommPeer:SyncSend(messageData, distribution, target)
   if (target == nil) then
     target = "nil";
   end
-  self:Debug(messageData.type.." @ "..distribution.." / "..target..": "..message);
+	self:SyncDebug(messageData.type.." @ "..distribution.." / "..target..": "..serializeTable(messageData, "data", true));
 end
 
 function AceCommPeer:SyncRequestPackets(ids, distribution, target)
@@ -249,9 +254,10 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
   if (prefix == self.syncCommName) then
     local valid, messageData = self:Deserialize(message);
     if (not valid) then
-      self:Debug("OnCommReceived @ "..prefix.." / "..serializeTable(messageData));
+	  	self:SyncDebug("OnCommReceived invalid @ "..distribution.." / "..sender..": "..serializeTable(messageData, "data", true));
       return;
     end
+  	self:SyncDebug(messageData.type.." @ "..distribution.." / "..sender..": "..serializeTable(messageData, "data", true));
     self:SyncPeerAdd(sender, distribution);
     if (messageData.type == "SyncReport") then
       local packetsKnownLocal = {};
@@ -352,6 +358,7 @@ local mixins = {
 	"GetSyncDbDefaults",
 	"GetSyncTime",
 	"GetSyncPacketsSorted",
+	"SyncDebug",
 	"SyncPeers",
 	"SyncPeer",
 	"SyncSend",

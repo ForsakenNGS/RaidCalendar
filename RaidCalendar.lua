@@ -111,7 +111,10 @@ function RaidCalendar:OnInitialize()
     FLEX_HEAL = "interface\\icons\\spell_nature_healingwavelesser"
   };
   -- EVENTS
+  self:RegisterMessage("SYNC_DEBUG", "OnSyncDebug")
   self:RegisterMessage("SYNC_PACKETS_CHANGED", "OnActionLogChanged")
+  self:RegisterSyncChannel("GUILD");
+  self:RegisterSyncChannel("WHISPER");
   -- QUEUED Actions
   self.queueReparse = true;
   self.queueChatReport = true;
@@ -270,7 +273,11 @@ end
 -- Handle synchronisation                                                     --
 --------------------------------------------------------------------------------
 
-function RaidCalendar:OnActionLogChanged(message, actions)
+function RaidCalendar:OnSyncDebug(event, message)
+  self:Debug(message);
+end
+
+function RaidCalendar:OnActionLogChanged(event, actions)
   self.actionLog = actions;
   self.queueReparse = true;
 end
