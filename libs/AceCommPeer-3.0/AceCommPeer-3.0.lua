@@ -11,7 +11,7 @@
 
 --[[ AceCommPeer-3.0
 
-TODO: Update sync peers by fiend list updates
+TODO: Add some todo (that there surely still is ;-) )
 
 ]]
 
@@ -48,10 +48,12 @@ local function serializeTable(val, name, skipnewlines, depth)
     return tmp
 end
 
-function AceCommPeer:RegisterChannel(channel)
-	if (not tContains(AceCommPeer.syncChannels, channel)) then
+function AceCommPeer:RegisterSyncChannel(channel)
+	if (not tContains(self.syncChannels, channel)) then
 		tinsert(self.syncChannels, channel);
-		self.syncPeers[channel] = {};
+		if (channel == "WHISPER") then
+	  	self:RegisterEvent("FRIENDLIST_UPDATE", "OnEventCommPeer");
+		end
 		if (channel == "GUILD") then
 	  	self:RegisterEvent("GUILD_ROSTER_UPDATE", "OnEventCommPeer");
 		end
@@ -116,7 +118,8 @@ function AceCommPeer:GetSyncDbDefaults()
     factionrealm = {
 			characters = {},
 			packets = {},
-			config = {}
+			config = {},
+			peers = {}
     }
   };
 end
@@ -145,7 +148,7 @@ function AceCommPeer:SyncPeers()
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
 			-- Whisper peers (friends?)
-			for charName, syncPeer in pairs(self.syncPeers) do
+			for charName, syncPeer in pairs(self.syncDb.factionrealm.peers) do
 				if (not syncPeer.guild) then
 					self:SyncPeer("WHISPER", charName);
 				end
@@ -159,7 +162,6 @@ end
 
 function AceCommPeer:SyncPeer(distribution, target)
   local messageData = { type = "SyncReport", known = {} };
-  for id, packet in orderedpairs(self.syncDb.factionrealm.packets) do
   for id, packet in pairs(self.syncDb.factionrealm.packets) do
     tinsert(messageData.known, id);
   end
@@ -186,7 +188,7 @@ function AceCommPeer:SyncBroadcastPackets(ids)
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
 			-- Whisper peers (friends?)
-			for charName, syncPeer in pairs(self.syncPeers) do
+			for charName, syncPeer in pairs(self.syncDb.factionrealm.peers) do
 				if (not syncPeer.guild) then
 					self:SyncSendPackets(ids, "WHISPER", charName);
 				end
@@ -225,26 +227,26 @@ function AceCommPeer:SyncUpdateVerification(id)
 end
 
 function AceCommPeer:SyncPeerAdd(charName, distribution)
-	if not self.syncPeers[charName] then
-		self.syncPeers[charName] = {
+	if not self.syncDb.factionrealm.peers[charName] then
+		self.syncDb.factionrealm.peers[charName] = {
 			friend = false, guild = false, online = true, updated = self:GetSyncTime()
 		};
 	else
-		self.syncPeers[charName].updated = self:GetSyncTime();
+		self.syncDb.factionrealm.peers[charName].updated = self:GetSyncTime();
 	end
 	if (distribution == "GUILD") then
-		self.syncPeers[charName].guild = true;
+		self.syncDb.factionrealm.peers[charName].guild = true;
 	end
 end
 
 function AceCommPeer:SyncPeerAvailable(charName)
-	if not self.syncPeers[charName] then
-		self.syncPeers[charName] = {
+	if not self.syncDb.factionrealm.peers[charName] then
+		self.syncDb.factionrealm.peers[charName] = {
 			friend = false, guild = false, online = false, updated = false
 		};
 	end
 	-- TODO Update online status?
-	return self.syncPeers[charName].online;
+	return self.syncDb.factionrealm.peers[charName].online;
 end
 
 --------------------------------------------------------------------------------
@@ -263,7 +265,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       local packetsKnownLocal = {};
       local packetsMissingLocal = {};
       local packetsMissingRemote = {};
-      for id, packet in orderedpairs(self.syncDb.factionrealm.packets) do
+      for id, packet in pairs(self.syncDb.factionrealm.packets) do
         tinsert(packetsKnownLocal, id);
         if not tContains(messageData.known, id) then
           tinsert(packetsMissingRemote, id);
@@ -286,7 +288,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       self:SyncSendPackets(messageData.packetIds, sender);
     elseif (messageData.type == "SyncData") then
 			local newPackets = false;
-      for id, packet in orderedpairs(messageData.packets) do
+      for id, packet in pairs(messageData.packets) do
         if (self.syncDb.factionrealm.packets[id] == nil) then
           self:AddSyncPacket(packet.type, packet.data, packet.timestamp, packet.expires, packet.source, id, sender);
 					newPackets = true;
@@ -341,11 +343,33 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
 		for guildIndex = 1, GetNumGuildMembers() do
 			local name, rankName, rankIndex, level, classDisplayName,
 				zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
-			if (self.syncPeers[charName]) then
-				self.syncPeers[charName].online = isOnline;
+			if (self.syncDb.factionrealm.peers[charName]) then
+				self.syncDb.factionrealm.peers[charName].online = isOnline;
+				self.syncDb.factionrealm.peers[charName].guild = true;
 			end
 		end
   end
+  if (eventName == "FRIENDLIST_UPDATE") then
+		-- Update friends online
+		for friendIndex = 1, C_FriendList.GetNumFriends() do
+			local friend = C_FriendList.GetFriendInfoByIndex(friendIndex);
+			if (self.syncDb.factionrealm.peers[friend.name]) then
+				self.syncDb.factionrealm.peers[friend.name].online = friend.connected;
+				self.syncDb.factionrealm.peers[friend.name].friend = true;
+			end
+		end
+  end
+  if (eventName == "GUILD_ROSTER_UPDATE") then
+		-- Update guild members online
+		for guildIndex = 1, GetNumGuildMembers() do
+			local name, rankName, rankIndex, level, classDisplayName,
+				zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
+			if (self.syncDb.factionrealm.peers[charName]) then
+				self.syncDb.factionrealm.peers[charName].online = isOnline;
+				self.syncDb.factionrealm.peers[charName].guild = true;
+			end
+		end
+	end
 end
 
 ----------------------------------------
@@ -353,7 +377,6 @@ end
 ----------------------------------------
 
 local mixins = {
-	"RegisterChannel",
 	"AddSyncPacket",
 	"GetSyncDbDefaults",
 	"GetSyncTime",
@@ -369,8 +392,9 @@ local mixins = {
 	"SyncSendPackets",
 	"OnSyncPacketsChanged",
 	"OnEventCommPeer",
-	"OnCommReceivedPeer"
-}
+	"OnCommReceivedPeer",
+	"RegisterSyncChannel"
+};
 
 -- Embeds AceComm-3.0 into the target object making the functions from the mixins list available on target:..
 -- @param target target object to embed AceComm-3.0 in
@@ -383,7 +407,6 @@ function AceCommPeer:Embed(target)
 	end
 	target.syncDb = LibStub("AceDB-3.0"):New(target.name.."PeerSync", target:GetSyncDbDefaults());
 	target.syncChannels = {};
-	target.syncPeers = {};
   target.syncTimeStart = GetServerTime() - GetTime();
   -- EVENTS
   target:RegisterComm(target.syncCommName, "OnCommReceivedPeer")
