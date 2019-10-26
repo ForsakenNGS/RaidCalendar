@@ -299,7 +299,7 @@ function RaidCalendar:ParseActionLog()
         end
       end
       if #(signupAcks) > 0 then
-        local timestamp = self:GetTime();
+        local timestamp = self:GetSyncTime();
         self:AddSyncPacket("raidSignupAck", { raidId = raidId, characters = signupAcks });
         self.queueReparse = true;
         return;
@@ -364,7 +364,7 @@ function RaidCalendar:ParseActionEntry(index, action)
   elseif (action.type == "raidSignupAck") then
     local raid = self.db.factionrealm.raids[action.data.raidId];
     if raid then
-      for charIndex, charName in ipairs(action.characters) do
+      for charIndex, charName in ipairs(action.data.characters) do
         if raid.signups[charName] then
           raid.signups[charName].ack = true;
           raid.signups[charName].ackTime = timestamp;
