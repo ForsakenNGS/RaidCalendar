@@ -99,6 +99,7 @@ RaidCreateFrame.editComment = editComment;
 RaidCreateFrame:AddChild(editGroupRaid);
 
 local editDetails = AceGUI:Create("MultiLineEditBox");
+editDetails:SetLabel(L["FRAME_GENERIC_DESCRIPTION"]);
 editDetails:SetFullWidth(true);
 editDetails:SetNumLines(8);
 editDetails:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnDetailsChanged(widget, text) end);

@@ -38,6 +38,7 @@ L["FRAME_GENERIC_START"] = "Start";
 L["FRAME_GENERIC_END"] = "End";
 L["FRAME_GENERIC_INSTANCE"] = "Instance";
 L["FRAME_GENERIC_COMMENT"] = "Comment";
+L["FRAME_GENERIC_DESCRIPTION"] = "Description";
 L["FRAME_GENERIC_SAVE"] = "Save";
 L["FRAME_GENERIC_DELETE"] = "Delete";
 
