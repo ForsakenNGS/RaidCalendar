@@ -152,24 +152,6 @@ function RaidCalendar:QueueUpdate()
   self.queueStartup = false;
 end
 
-function RaidCalendar:CanEditRaids()
-  return true;
-  --return CanEditMOTD();
-end
-
---------------------------------------------------------------------------------
--- Handle game events                                                         --
---------------------------------------------------------------------------------
-function RaidCalendar:OnEnable()
-  self:Debug("ADDON ENABLE");
-  -- TODO
-end
-
-function RaidCalendar:OnDisable()
-  self:Debug("ADDON DISABLE");
-  -- TODO
-end
-
 function RaidCalendar:GetColorHex(rgb)
 	local code = '|c';
   if (rgb.a ~= nil) then
@@ -181,49 +163,6 @@ function RaidCalendar:GetColorHex(rgb)
   code = code..string.format("%02x", math.floor(rgb.g * 255));
   code = code..string.format("%02x", math.floor(rgb.b * 255));
   return code;
-end
-
-function RaidCalendar:Debug(...)
-  if (self.db.char.debug) then
-    local message = "Debug: ";
-    local arg = {...};
-    for i,v in ipairs(arg) do
-      if (type(v) == "table") then
-        message = message..self:DebugTable(v, nil, true, 1).." ";
-      else
-        message = message..tostring(v).." ";
-      end
-    end
-    self:Print(message);
-  end
-end
-
-function RaidCalendar:DebugTable(val, name, skipnewlines, maxDepth, depth)
-    skipnewlines = skipnewlines or false
-    maxDepth = maxDepth or 3
-    depth = depth or 0
-    local tmp = string.rep(" ", depth)
-    if name then tmp = tmp .. name .. " = " end
-    if type(val) == "table" then
-        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
-        if (maxDepth > depth) then
-          for k, v in pairs(val) do
-              tmp =  tmp .. self:DebugTable(v, k, skipnewlines, maxDepth, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
-          end
-        else
-          tmp = tmp .. "max. depth reached: " .. maxDepth .. (not skipnewlines and "\n" or "");
-        end
-        tmp = tmp .. string.rep(" ", depth) .. "}"
-    elseif type(val) == "number" then
-        tmp = tmp .. tostring(val)
-    elseif type(val) == "string" then
-        tmp = tmp .. string.format("%q", val)
-    elseif type(val) == "boolean" then
-        tmp = tmp .. (val and "true" or "false")
-    else
-        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
-    end
-    return tmp
 end
 
 --------------------------------------------------------------------------------
@@ -292,6 +231,11 @@ function RaidCalendar:GetRaidSignups(raidId)
   return signupsSorted;
 end
 
+function RaidCalendar:CanEditRaids()
+  return true;
+  --return CanEditMOTD();
+end
+
 function RaidCalendar:IsOwnRaid(raidData)
   for charName, charDetails in pairs(RaidCalendar.db.factionrealm.characters) do
     if (raidData.createdBy == charName) then
@@ -302,12 +246,74 @@ function RaidCalendar:IsOwnRaid(raidData)
 end
 
 --------------------------------------------------------------------------------
--- Handle synchronisation                                                     --
+-- Options                                                                    --
 --------------------------------------------------------------------------------
 
-function RaidCalendar:OnSyncDebug(event, message)
-  self:Debug(message);
+function RaidCalendar:GetDefaultOptions()
+  return {
+    char = {
+      debug = true
+    },
+    factionrealm = {
+      characters = {},
+      raids = {},
+      raidDefaults = {
+        dateStr = "---", timeInvite = "18:30", timeStart = "19:00", timeEnd = "22:00",
+        instance = "MC", comment = "", details = ""
+      }
+    }
+  };
 end
+
+function RaidCalendar:InitOptions()
+  local options = {
+    name = ADDON_NAME,
+    handler = RaidCalendar,
+    type = "group",
+    args = {
+      show = {
+        name = L["OPTION_SHOW_CALENDAR"],
+        name = L["OPTION_SHOW_CALENDAR_DESC"],
+        type = "execute",
+        order = 10,
+        func = function(info,val)
+          RaidCalendarFrame:Show();
+          RaidCalendarFrame:UpdateMonth();
+        end
+      },
+      add = {
+        name = L["OPTION_ADD_CHARACTER"],
+        name = L["OPTION_ADD_CHARACTER_DESC"],
+        type = "execute",
+        order = 11,
+        func = function(info,val)
+          if info.input and (strlen(info.input) > 5) then
+            local charName = strsub(info.input, 5);
+            self:SyncPeerAvailable(charName);
+            self:Debug("Synchronizing raids with '"..charName.."'...");
+          else
+            self:Print(L["OPTION_ADD_CHARACTER_HELP"]);
+          end
+        end
+      },
+      debug = {
+        name = L["OPTION_DEBUG_NAME"],
+        desc = L["OPTION_DEBUG_DESC"],
+        type = "toggle",
+        order = 100,
+        set = function(info,val)
+          RaidCalendar.db.char.debug = val;
+        end,
+        get = function(info) return RaidCalendar.db.char.debug; end
+      }
+    }
+  }
+  return options;
+end
+
+--------------------------------------------------------------------------------
+-- Handle synchronisation                                                     --
+--------------------------------------------------------------------------------
 
 function RaidCalendar:OnActionLogChanged(event, actions)
   self.actionLog = actions;
@@ -407,67 +413,66 @@ function RaidCalendar:ParseActionEntry(index, action)
 end
 
 --------------------------------------------------------------------------------
--- Options                                                                    --
+-- Handle game events                                                         --
 --------------------------------------------------------------------------------
 
-function RaidCalendar:GetDefaultOptions()
-  return {
-    char = {
-      debug = true
-    },
-    factionrealm = {
-      characters = {},
-      raids = {},
-      raidDefaults = {
-        dateStr = "---", timeInvite = "18:30", timeStart = "19:00", timeEnd = "22:00",
-        instance = "MC", comment = "", details = ""
-      }
-    }
-  };
+function RaidCalendar:OnEnable()
+  self:Debug("ADDON ENABLE");
+  -- TODO
 end
 
-function RaidCalendar:InitOptions()
-  local options = {
-    name = ADDON_NAME,
-    handler = RaidCalendar,
-    type = "group",
-    args = {
-      show = {
-        name = L["OPTION_SHOW_CALENDAR"],
-        name = L["OPTION_SHOW_CALENDAR_DESC"],
-        type = "execute",
-        order = 10,
-        func = function(info,val)
-          RaidCalendarFrame:Show();
-          RaidCalendarFrame:UpdateMonth();
-        end
-      },
-      add = {
-        name = L["OPTION_ADD_CHARACTER"],
-        name = L["OPTION_ADD_CHARACTER_DESC"],
-        type = "execute",
-        order = 11,
-        func = function(info,val)
-          if info.input and (strlen(info.input) > 5) then
-            local charName = strsub(info.input, 5);
-            self:SyncPeerAvailable(charName);
-            self:Debug("Synchronizing raids with '"..charName.."'...");
-          else
-            self:Print(L["OPTION_ADD_CHARACTER_HELP"]);
+function RaidCalendar:OnDisable()
+  self:Debug("ADDON DISABLE");
+  -- TODO
+end
+
+--------------------------------------------------------------------------------
+-- Debug output                                                               --
+--------------------------------------------------------------------------------
+
+function RaidCalendar:OnSyncDebug(event, message)
+  self:Debug(message);
+end
+
+function RaidCalendar:Debug(...)
+  if (self.db.char.debug) then
+    local message = "Debug: ";
+    local arg = {...};
+    for i,v in ipairs(arg) do
+      if (type(v) == "table") then
+        message = message..self:DebugTable(v, nil, true, 1).." ";
+      else
+        message = message..tostring(v).." ";
+      end
+    end
+    self:Print(message);
+  end
+end
+
+function RaidCalendar:DebugTable(val, name, skipnewlines, maxDepth, depth)
+    skipnewlines = skipnewlines or false
+    maxDepth = maxDepth or 3
+    depth = depth or 0
+    local tmp = string.rep(" ", depth)
+    if name then tmp = tmp .. name .. " = " end
+    if type(val) == "table" then
+        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
+        if (maxDepth > depth) then
+          for k, v in pairs(val) do
+              tmp =  tmp .. self:DebugTable(v, k, skipnewlines, maxDepth, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
           end
+        else
+          tmp = tmp .. "max. depth reached: " .. maxDepth .. (not skipnewlines and "\n" or "");
         end
-      },
-      debug = {
-        name = L["OPTION_DEBUG_NAME"],
-        desc = L["OPTION_DEBUG_DESC"],
-        type = "toggle",
-        order = 100,
-        set = function(info,val)
-          RaidCalendar.db.char.debug = val;
-        end,
-        get = function(info) return RaidCalendar.db.char.debug; end
-      }
-    }
-  }
-  return options;
+        tmp = tmp .. string.rep(" ", depth) .. "}"
+    elseif type(val) == "number" then
+        tmp = tmp .. tostring(val)
+    elseif type(val) == "string" then
+        tmp = tmp .. string.format("%q", val)
+    elseif type(val) == "boolean" then
+        tmp = tmp .. (val and "true" or "false")
+    else
+        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+    end
+    return tmp
 end
