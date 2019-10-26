@@ -150,7 +150,11 @@ function AceCommPeer:SyncPeers()
 			-- Whisper peers (friends?)
 			for charName, syncPeer in pairs(self.syncDb.factionrealm.peers) do
 				if (not syncPeer.guild) then
-					self:SyncPeer("WHISPER", charName);
+          if (syncPeer.online) then
+  					self:SyncPeer("WHISPER", charName);
+          else
+            -- TODO Recheck online status if last update was time X ago?
+          end
 				end
 			end
 		else
@@ -190,7 +194,11 @@ function AceCommPeer:SyncBroadcastPackets(ids)
 			-- Whisper peers (friends?)
 			for charName, syncPeer in pairs(self.syncDb.factionrealm.peers) do
 				if (not syncPeer.guild) then
-					self:SyncSendPackets(ids, "WHISPER", charName);
+          if (syncPeer.online) then
+            self:SyncSendPackets(ids, "WHISPER", charName);
+          else
+            -- TODO Recheck online status if last update was time X ago?
+          end
 				end
 			end
 		else
@@ -244,6 +252,9 @@ function AceCommPeer:SyncPeerAvailable(charName)
 		self.syncDb.factionrealm.peers[charName] = {
 			friend = false, guild = false, online = false, updated = false
 		};
+    -- Send ping to check if player is online
+    local messageData = { type = "SyncPing", time = self:GetSyncTime() };
+    self:SyncSend(messageData, "WHISPER", charName);
 	end
 	-- TODO Update online status?
 	return self.syncDb.factionrealm.peers[charName].online;

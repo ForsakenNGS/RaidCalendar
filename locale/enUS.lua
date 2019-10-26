@@ -7,6 +7,9 @@ L["OPTION_DEBUG_NAME"] = "Debugging output";
 L["OPTION_DEBUG_DESC"] = "Prints debug messages in the chat";
 L["OPTION_SHOW_CALENDAR"] = "Open Calendar";
 L["OPTION_SHOW_CALENDAR_DESC"] = "Open the calendar window";
+L["OPTION_ADD_CHARACTER"] = "Add character";
+L["OPTION_ADD_CHARACTER_DESC"] = "Invite character to the raids";
+L["OPTION_ADD_CHARACTER_HELP"] = "Please input like: /rc add <spielername> (e.g. \"/rc add Muradin\")";
 
 L["STATUS_SIGNED_UP"] = "Signed up";
 L["STATUS_UNSURE"] = "Unsure";

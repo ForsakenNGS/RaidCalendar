@@ -10,6 +10,9 @@ L["OPTION_DEBUG_NAME"] = "Debug-Ausgaben";
 L["OPTION_DEBUG_DESC"] = "Gibt Debug-Ausgaben im Chat aus";
 L["OPTION_SHOW_CALENDAR"] = "Kalender öffnen";
 L["OPTION_SHOW_CALENDAR_DESC"] = "Das Kalender-Fenster öffnen";
+L["OPTION_ADD_CHARACTER"] = "Char. hinzufügen";
+L["OPTION_ADD_CHARACTER_DESC"] = "Charakter zu den raids einladen";
+L["OPTION_ADD_CHARACTER_HELP"] = "Geben Sie ein: /rc add <spielername> (z.B. \"/rc add Muradin\")";
 
 L["STATUS_SIGNED_UP"] = "Angemeldet";
 L["STATUS_UNSURE"] = "Unsicher";
