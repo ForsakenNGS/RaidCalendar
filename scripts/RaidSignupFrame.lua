@@ -296,6 +296,22 @@ function RaidSignupFrame:RefreshTab()
   elseif self.tabs.tabActive == "signup" then
     self:ShowTabSignup();
   end
+  if (self.raidData) then
+    if (self.raidData.signedUp) then
+      if (self.raidData.signedUp.ack) then
+        -- Signed up and confirmed
+        self:SetStatusText("|cff00ff00"..L["FRAME_SIGNUP_STATUS_ACK"]);
+      else
+        -- Signed up and pending
+        self:SetStatusText("|cffffff00"..L["FRAME_SIGNUP_STATUS_PENDING"]);
+      end
+    else
+      -- Not signed up
+      self:SetStatusText("|cffff0000"..L["FRAME_SIGNUP_STATUS_OPEN"]);
+    end
+  else
+    self:SetStatusText("");
+  end
 end
 
 function RaidSignupFrame:OnSave(button, status, character, role, notes)

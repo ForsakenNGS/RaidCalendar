@@ -59,3 +59,6 @@ L["FRAME_SIGNUP_CREATE"] = "Neuer Raid";
 L["FRAME_SIGNUP_TAB_OVERVIEW"] = "Übersicht";
 L["FRAME_SIGNUP_TAB_PLAYERS"] = "Spieler";
 L["FRAME_SIGNUP_TAB_SIGNUP"] = "Anmelden";
+L["FRAME_SIGNUP_STATUS_ACK"] = "Anmeldung erfolgreich verschickt";
+L["FRAME_SIGNUP_STATUS_PENDING"] = "Anmeldung steht noch aus...";
+L["FRAME_SIGNUP_STATUS_OPEN"] = "Noch nicht angemeldet!";
