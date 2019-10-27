@@ -102,8 +102,6 @@ function RaidCalendarFrame:OnClickDay(widget, button)
   local day = widget:GetUserData("dayIndex");
   local dateStr = widget:GetUserData("dateStr");
   local dateLabel = widget:GetUserData("dateLabel");
-  RaidCalendar:Debug(button);
-  RaidCalendar:Debug(week, day, dateStr, dateLabel);
   if (button == "LeftButton") then
     RaidSignupFrame:OpenDay(dateStr, dateLabel);
   elseif (button == "RightButton") and RaidCalendar:CanEditRaids() then
