@@ -60,7 +60,7 @@ function AceCommPeer:RegisterSyncChannel(channel)
 	end
 end
 
-function AceCommPeer:AddSyncPacket(type, data, timestamp, expires, source, packetId, sender)
+function AceCommPeer:AddSyncPacket(type, data, timestamp, expires, source, packetId, sender, suppressUpdate)
 	local charName = UnitName("player");
 	if (not source) then
 		source = charName;
@@ -105,6 +105,10 @@ function AceCommPeer:AddSyncPacket(type, data, timestamp, expires, source, packe
 	if (sender == charName) then
 		self:SyncBroadcastPackets({ packetId });
 	end
+  -- Send update event
+  if (not suppressUpdate) then
+    self:OnSyncPacketsChanged();
+  end
 	-- Return packet id
 	return packetId;
 end
@@ -300,7 +304,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
 			local newPackets = false;
       for id, packet in pairs(messageData.packets) do
         if (self.syncDb.factionrealm.packets[id] == nil) then
-          self:AddSyncPacket(packet.type, packet.data, packet.timestamp, packet.expires, packet.source, id, sender);
+          self:AddSyncPacket(packet.type, packet.data, packet.timestamp, packet.expires, packet.source, id, sender, true);
 					newPackets = true;
         end
       end

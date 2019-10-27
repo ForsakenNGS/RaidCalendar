@@ -44,6 +44,16 @@ end
 function RaidSignupFrame:ShowTabOverview()
   local tabOverview = AceGUI:Create("SimpleGroup");
   if (self.raidData) then
+    -- Tooltip
+    local tooltipShow = function(widget)
+      GameTooltip_SetDefaultAnchor( GameTooltip, UIParent );
+      GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR");
+      GameTooltip:SetText(widget:GetUserData("tooltip"));
+      GameTooltip:Show();
+    end;
+    local tooltipHide = function(widget)
+      GameTooltip:Hide();
+    end;
     -- Base information
     local raidInstance = "|cffffffff"..self.raidData.instance.."|cffffff80: "..self.raidData.comment;
     if (self.raidData.instance == "Other") then
@@ -55,54 +65,68 @@ function RaidSignupFrame:ShowTabOverview()
     local labelInstance = AceGUI:Create("Label");
     labelInstance:SetText(raidInstance);
     labelInstance:SetHeight(24);
+    labelInstance:SetFullWidth(true);
     labelInstance:SetFont("Fonts\\FRIZQT__.TTF", 14)
     local labelTimes = AceGUI:Create("Label");
     labelTimes:SetText(raidTimes);
     labelTimes:SetHeight(24);
+    labelTimes:SetFullWidth(true);
     labelTimes:SetFont("Fonts\\FRIZQT__.TTF", 12)
     local infoBase = AceGUI:Create("SimpleGroup");
     infoBase:SetWidth(160);
-    infoBase:SetLayout("List");
+    infoBase:SetFullHeight(true);
+    infoBase:SetLayout("Flow");
     infoBase:AddChild(labelInstance);
     infoBase:AddChild(labelTimes);
     -- Statistics
     local infoStatsRoles = AceGUI:Create("SimpleGroup");
-    infoStatsRoles:SetFullWidth(true);
     infoStatsRoles:SetLayout("Flow");
     for roleName, roleCount in pairs(self.raidData.roleStats) do
       local iconRole = AceGUI:Create("Icon");
       iconRole:SetImage(RaidCalendar.roleIcons[roleName]);
-      iconRole:SetImageSize(16, 16);
+      iconRole:SetImageSize(24, 24);
       iconRole:SetLabel(roleCount);
-      iconRole:SetWidth(32);
+      iconRole:SetHeight(48);
+      iconRole:SetWidth(28);
+      iconRole:SetUserData("tooltip", L["ROLE_"..roleName]);
+      iconRole:SetCallback("OnEnter", tooltipShow);
+      iconRole:SetCallback("OnLeave", tooltipHide);
       infoStatsRoles:AddChild(iconRole);
     end
     local infoStatsClasses = AceGUI:Create("SimpleGroup");
-    infoStatsClasses:SetFullWidth(true);
     infoStatsClasses:SetLayout("Flow");
     for className, classCount in pairs(self.raidData.classStats) do
       local iconClass = AceGUI:Create("Icon");
       iconClass:SetImage(RaidCalendar.classIcons[className]);
-      iconClass:SetImageSize(16, 16);
+      iconClass:SetImageSize(24, 24);
       iconClass:SetLabel(classCount);
-      iconClass:SetWidth(32);
+      iconClass:SetHeight(48);
+      iconClass:SetWidth(28);
+      iconClass:SetUserData("tooltip", L["CLASS_"..className]);
+      iconClass:SetCallback("OnEnter", tooltipShow);
+      iconClass:SetCallback("OnLeave", tooltipHide);
       infoStatsClasses:AddChild(iconClass);
     end
     local infoStats = AceGUI:Create("SimpleGroup");
-    infoStats:SetWidth(300);
-    infoStats:SetLayout("List");
+    infoStats.alignoffset = 32;
+    infoStats:SetLayout("Flow");
     infoStats:AddChild(infoStatsRoles);
     infoStats:AddChild(infoStatsClasses);
     -- Detail text
     local infoDetails = AceGUI:Create("Label");
     infoDetails:SetText("|cffC0C0C0\n"..self.raidData.details);
     infoDetails:SetFullWidth(true);
-    infoDetails:SetHeight(24);
-    infoDetails:SetFont("Fonts\\FRIZQT__.TTF", 12)
+    infoDetails:SetFont("Fonts\\FRIZQT__.TTF", 12);
+    -- Info header group
+    local infoHeader = AceGUI:Create("SimpleGroup");
+    infoHeader:SetFullWidth(true);
+    infoHeader:SetLayout("Flow");
+    infoHeader:AddChild(infoBase);
+    infoHeader:AddChild(infoStats);
+    -- Tab content
     tabOverview:SetFullWidth(true);
     tabOverview:SetLayout("Flow");
-    tabOverview:AddChild(infoBase);
-    tabOverview:AddChild(infoStats);
+    tabOverview:AddChild(infoHeader);
     tabOverview:AddChild(infoDetails);
   end
   self.tabs:AddChild(tabOverview);

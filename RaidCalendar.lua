@@ -35,30 +35,6 @@ local function clonetable(t, deep)
   return tNew;
 end
 
-local function orderednext(t, n)
-   local key = t[t.__next]
-   if not key then return end
-   t.__next = t.__next + 1
-   return key, t.__source[key]
-end
-
-local function orderedpairs(t, f)
-   local keys, kn = {__source = t, __next = 1}, 1
-   for k in pairs(t) do
-     keys[kn], kn = k, kn + 1;
-   end
-   sort(keys, f)
-   return orderednext, keys
-end
-
-local function orderedtable(t, f)
-  local tNew = {};
-  for k, v in orderedpairs(t, f) do
-    tNew[k] = v;
-  end
-  return tNew;
-end
-
 function RaidCalendar:OnInitialize()
   -- DATABASE / STORAGE
   self.db = LibStub("AceDB-3.0"):New(ADDON_DB_NAME, self:GetDefaultOptions());
@@ -151,7 +127,7 @@ function RaidCalendar:QueueUpdate()
   elseif (self.queueChatReport) then
     self.queueChatReport = false;
     local raidsNotSignedUp = 0;
-    for raidId, raidData in orderedpairs(self.db.factionrealm.raids) do
+    for raidId, raidData in pairs(self.db.factionrealm.raids) do
       if (not raidData.signedUp) then
         raidsNotSignedUp = raidsNotSignedUp + 1;
       end
@@ -193,7 +169,6 @@ function RaidCalendar:AddRaid(dateStr, expires, createdBy, timeInvite, timeStart
     timeInvite = timeInvite, timeStart = timeStart, timeEnd = timeEnd,
     instance = instance, comment = comment, details = details
   }, nil, expires );
-  self:OnSyncPacketsChanged();
   return id;
 end
 
@@ -203,13 +178,11 @@ function RaidCalendar:UpdateRaid(id, dateStr, expires, createdBy, timeInvite, ti
     timeInvite = timeInvite, timeStart = timeStart, timeEnd = timeEnd,
     instance = instance, comment = comment, details = details
   });
-  self:OnSyncPacketsChanged();
   return true;
 end
 
 function RaidCalendar:DeleteRaid(id)
   self:AddSyncPacket("raidDelete", { id = id });
-  self:OnSyncPacketsChanged();
   return true;
 end
 
@@ -218,13 +191,12 @@ function RaidCalendar:Signup(raidId, status, character, level, class, role, note
     raidId = raidId, status = status, notes = notes,
     character = character, level = level, class = class, role = role
   });
-  self:OnSyncPacketsChanged();
   return true;
 end
 
 function RaidCalendar:GetRaids(dateStr)
   local raidList = {};
-  for raidId, raidData in orderedpairs(self.db.factionrealm.raids) do
+  for raidId, raidData in pairs(self.db.factionrealm.raids) do
     if (raidData ~= nil) and (raidData.dateStr == dateStr) then
       raidData.id = raidId;
       tinsert(raidList, raidData);
@@ -242,11 +214,12 @@ function RaidCalendar:GetRaidSignups(raidId)
   for charName, charSignup in pairs(self.db.factionrealm.raids[raidId].signups) do
     tinsert(signupsSorted, charSignup);
   end
+  self:Debug(signupsSorted);
   sort(signupsSorted, function(a, b)
-    if (not a.ackTime) then
+    if (not a.ack) then
       return true;
     end
-    if (not b.ackTime) then
+    if (not b.ack) then
       return false;
     end
     return a.ackTime < b.ackTime;
@@ -349,28 +322,27 @@ end
 function RaidCalendar:ParseActionLog()
   -- Parse log
   self.db.factionrealm.raids = {};
-  for index, action in orderedpairs(self.actionLog) do
+  for index, action in ipairs(self.actionLog) do
     self:ParseActionEntry(index, action);
   end
   -- Check unverified raid signups
   local acksSent = false;
-  for raidId, raidData in orderedpairs(self.db.factionrealm.raids) do
+  for raidId, raidData in pairs(self.db.factionrealm.raids) do
     if (self:IsOwnRaid(raidData)) then
       local signupAcks = {};
-      for charName, signupData in orderedpairs(raidData.signups) do
+      for charName, signupData in pairs(raidData.signups) do
         if (not signupData.ack) then
           tinsert(signupAcks, charName);
         end
       end
       if #(signupAcks) > 0 then
         self:AddSyncPacket("raidSignupAck", { raidId = raidId, characters = signupAcks });
-        self:OnSyncPacketsChanged();
         return;
       end
     end
   end
   -- Process raid data
-  for raidId, raidData in orderedpairs(self.db.factionrealm.raids) do
+  for raidId, raidData in pairs(self.db.factionrealm.raids) do
     raidData.classStats = {};
     for className, classColor in pairs(self.classColors) do
       raidData.classStats[className] = 0;
@@ -426,6 +398,7 @@ function RaidCalendar:ParseActionEntry(index, action)
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].timeFirst = timeFirst;
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].timeLast = action.timestamp;
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].ack = false;
+      self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].ackTime = false;
       if (action.data.character == playerName) then
         self.db.factionrealm.raids[action.data.raidId].signedUp = self.db.factionrealm.raids[action.data.raidId].signups[playerName];
       end
@@ -436,7 +409,7 @@ function RaidCalendar:ParseActionEntry(index, action)
       for charIndex, charName in ipairs(action.data.characters) do
         if raid.signups[charName] then
           raid.signups[charName].ack = true;
-          raid.signups[charName].ackTime = timestamp;
+          raid.signups[charName].ackTime = action.timestamp;
         end
       end
     end
@@ -471,7 +444,7 @@ function RaidCalendar:Debug(...)
     local arg = {...};
     for i,v in ipairs(arg) do
       if (type(v) == "table") then
-        message = message..self:DebugTable(v, nil, true, 1).." ";
+        message = message..self:DebugTable(v, nil, true, 3).." ";
       else
         message = message..tostring(v).." ";
       end
