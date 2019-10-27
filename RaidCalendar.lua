@@ -4,6 +4,20 @@ local ADDON_DB_NAME = "RaidCalendarDB";
 RaidCalendar = LibStub("AceAddon-3.0"):NewAddon(ADDON_NAME, "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceCommPeer-3.0", "AceSerializer-3.0");
 local L = LibStub("AceLocale-3.0"):GetLocale("RaidCalendar");
 
+local RaidCalendarIcon = LibStub("LibDataBroker-1.1"):NewDataObject("RaidCalendarIcon", {
+    type = "data source",
+    text = L["TITLE"],
+    icon = "Interface\\Icons\\inv_scroll_04",
+    OnClick = function()
+      if RaidCalendarFrame:IsVisible() then
+        RaidCalendarFrame:Hide()
+      else
+        RaidCalendarFrame:Show()
+      end
+    end,
+})
+local icon = LibStub("LibDBIcon-1.0");
+
 local function clonetable(t, deep)
   local tNew = {};
   for k in pairs(t) do
@@ -51,6 +65,8 @@ function RaidCalendar:OnInitialize()
   self.frames = {};
   self.actionLog = self:GetSyncPacketsSorted();
   self:Debug("ADDON INIT");
+  -- MINIMAP ICON
+  icon:Register(L["TITLE"], RaidCalendarIcon, self.db.profile.minimap);
   -- OPTIONS
   self.options = LibStub("AceConfig-3.0"):RegisterOptionsTable(ADDON_NAME, self:InitOptions(), {"rc", "raidcal", "raidcalendar"});
   self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(ADDON_NAME, ADDON_NAME);
@@ -253,6 +269,9 @@ function RaidCalendar:GetDefaultOptions()
   return {
     char = {
       debug = true
+    },
+    profile = {
+      minimap = { hide = false }
     },
     factionrealm = {
       characters = {},

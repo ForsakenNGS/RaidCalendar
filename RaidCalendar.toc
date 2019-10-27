@@ -3,6 +3,6 @@
 ## Title: RaidCalendar
 ## Notes: Raid planning
 ## Author: Forsaken
-## SavedVariables: RaidCalendarDB
+## SavedVariables: RaidCalendarDB, RaidCalendarIcon
 
 RaidCalendar.xml

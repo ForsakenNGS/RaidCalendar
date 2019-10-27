@@ -9,6 +9,8 @@
   <Include file="libs\AceComm-3.0\AceComm-3.0.xml"/>
   <Include file="libs\AceCommPeer-3.0\AceCommPeer-3.0.xml"/>
   <Include file="libs\AceEvent-3.0\AceEvent-3.0.xml"/>
+  <Script file="libs\LibDataBroker-1.1\LibDataBroker-1.1.lua"/>
+  <Include file="libs\LibDBIcon-1.0\lib.xml"/>
 
   <Script file="locale\enUS.lua"/>
   <Script file="locale\deDE.lua"/>
