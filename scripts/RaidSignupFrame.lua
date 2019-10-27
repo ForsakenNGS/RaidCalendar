@@ -248,7 +248,7 @@ function RaidSignupFrame:ShowTabSignup()
   -- Character
   local characterDefault = RaidCalendar.db.factionrealm.characterDefault;
   local characterOptions = {};
-  for charName, charDetails in pairs(RaidCalendar.db.factionrealm.characters) do
+  for charName, charDetails in pairs(RaidCalendar.syncDb.factionrealm.characters) do
     if (characterDefault == nil) then
       characterDefault = charName;
     end
@@ -344,7 +344,7 @@ function RaidSignupFrame:RefreshTab()
 end
 
 function RaidSignupFrame:OnSave(button, status, character, role, notes)
-  local charDetails = RaidCalendar.db.factionrealm.characters[character];
+  local charDetails = RaidCalendar.syncDb.factionrealm.characters[character];
   RaidCalendar.db.factionrealm.characterDefault = character;
   RaidCalendar.db.factionrealm.roleDefault = role;
   RaidCalendar:Signup(self.raidData.id, status, character, charDetails.level, charDetails.class, role, notes);
