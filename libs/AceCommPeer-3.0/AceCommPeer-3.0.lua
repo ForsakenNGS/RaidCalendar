@@ -101,7 +101,6 @@ function AceCommPeer:AddSyncPacket(type, data, timestamp, expires, source, packe
 	-- Debug
 	self.syncDb.factionrealm.packets[packetId] = packet;
 	self:Print("Added packet: "..packetId);
-	self:Print("Next id: "..self.syncDb.char.messageId);
 	-- Broadcast if own
 	if (sender == charName) then
 		self:SyncBroadcastPackets({ packetId });
