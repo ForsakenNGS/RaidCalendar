@@ -10,9 +10,10 @@ local RaidCalendarIcon = LibStub("LibDataBroker-1.1"):NewDataObject("RaidCalenda
     icon = "Interface\\Icons\\inv_scroll_04",
     OnClick = function()
       if RaidCalendarFrame:IsVisible() then
-        RaidCalendarFrame:Hide()
+        RaidCalendarFrame:Hide();
       else
-        RaidCalendarFrame:Show()
+        RaidCalendarFrame:Show();
+        RaidCalendarFrame:UpdateMonth();
       end
     end,
 })
