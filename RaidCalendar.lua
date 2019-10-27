@@ -259,7 +259,7 @@ function RaidCalendar:CanEditRaids()
 end
 
 function RaidCalendar:IsOwnRaid(raidData)
-  for charName, charDetails in pairs(RaidCalendar.db.factionrealm.characters) do
+  for charName, charDetails in pairs(RaidCalendar.syncDb.factionrealm.characters) do
     if (raidData.createdBy == charName) then
       return true;
     end
@@ -362,7 +362,6 @@ function RaidCalendar:ParseActionLog()
         end
       end
       if #(signupAcks) > 0 then
-        local timestamp = self:GetSyncTime();
         self:AddSyncPacket("raidSignupAck", { raidId = raidId, characters = signupAcks });
         self:OnSyncPacketsChanged();
         return;
