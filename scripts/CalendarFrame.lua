@@ -176,7 +176,7 @@ function RaidCalendarFrame:UpdateMonth()
           if (raidData.signedUp.ack) then
             raidText = raidText.."|cff80ff80";
           else
-            raidText = raidText.."|cffffff80";
+            raidText = raidText.."|cffffb040";
           end
         else
           raidText = raidText.."|cffffffff";
