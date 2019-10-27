@@ -311,7 +311,6 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
 			if (newPackets) then
 				self:OnSyncPacketsChanged();
 			end
-      self.queueReparse = true;
     elseif (messageData.type == "SyncConfirm") then
 		  local packet = self.db.factionrealm.packets[messageData.id];
 		  if (self:Serialize(packet.data) == self:Serialize(messageData.data)) then
