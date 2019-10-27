@@ -109,7 +109,7 @@ function RaidCalendar:OnInitialize()
   self:RegisterSyncChannel("GUILD");
   self:RegisterSyncChannel("WHISPER");
   -- QUEUED Actions
-  self.queueReparse = true;
+  self.queueReparse = self:GetSyncTime() + 0.1;
   self.queueChatReport = true;
   self.queueStartup = true;
   self.queueFrame = CreateFrame("Frame");
@@ -119,7 +119,7 @@ function RaidCalendar:OnInitialize()
 end
 
 function RaidCalendar:QueueUpdate()
-  if (self.queueReparse) then
+  if not (self.queueReparse == false) and (self.queueReparse < self:GetSyncTime()) then
     -- Re-Parse log
     self.queueReparse = false;
     self:ParseActionLog();
@@ -315,10 +315,11 @@ end
 
 function RaidCalendar:OnActionLogChanged(event, actions)
   self.actionLog = actions;
-  self.queueReparse = true;
+  self.queueReparse = self:GetSyncTime() + 0.1;
 end
 
 function RaidCalendar:ParseActionLog()
+  self:Debug("Parsing peer action log... (len: "..#(self.actionLog)..")");
   -- Parse log
   self.db.factionrealm.raids = {};
   for index, action in ipairs(self.actionLog) do
@@ -363,6 +364,7 @@ function RaidCalendar:ParseActionLog()
   end
   -- Update calendar frame
   RaidCalendarFrame:UpdateMonth();
+  self:Debug("Parsing peer action log done!");
 end
 
 function RaidCalendar:ParseActionEntry(index, action)
