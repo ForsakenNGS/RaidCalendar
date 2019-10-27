@@ -214,7 +214,6 @@ function RaidCalendar:GetRaidSignups(raidId)
   for charName, charSignup in pairs(self.db.factionrealm.raids[raidId].signups) do
     tinsert(signupsSorted, charSignup);
   end
-  self:Debug(signupsSorted);
   sort(signupsSorted, function(a, b)
     if (not a.ack) then
       return true;
