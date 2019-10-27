@@ -181,7 +181,7 @@ function RaidCalendarFrame:UpdateMonth()
         else
           raidText = raidText.."|cffffffff";
         end
-        raidText = raidText..raidData.timeInvite.." "..raidInstance;
+        raidText = raidText..raidData.timeInvite.." "..raidInstance.." ("..raidData.signupCount..")";
       end
       dayFrame:SetText(raidText);
       dayFrame:SetUserData("weekIndex", week);

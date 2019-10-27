@@ -358,6 +358,7 @@ function RaidCalendar:ParseActionLog()
   end
   -- Process raid data
   for raidId, raidData in pairs(self.db.factionrealm.raids) do
+    raidData.signupCount = 0;
     raidData.classStats = {};
     for className, classColor in pairs(self.classColors) do
       raidData.classStats[className] = 0;
@@ -368,6 +369,7 @@ function RaidCalendar:ParseActionLog()
     end
     for charName, signupData in pairs(raidData.signups) do
       if (signupData.status == "SIGNED_UP") or (signupData.status == "LATE") then
+        raidData.signupCount = raidData.signupCount + 1;
         if (signupData.class) then
           raidData.classStats[signupData.class] = raidData.classStats[signupData.class] + 1;
         end
