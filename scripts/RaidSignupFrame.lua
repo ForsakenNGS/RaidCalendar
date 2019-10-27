@@ -217,7 +217,7 @@ function RaidSignupFrame:ShowTabPlayers()
         ..date(L["DATE_FORMAT"], signupPlayer.timeFirst).." - "..date(L["DATE_FORMAT"], signupPlayer.timeLast).."\n"
         .."|cffffffff"..L["FRAME_SIGNUP_NOTES"]..":\n".."|cffffff80"..signupPlayer.notes;
       local tooltipShow = function(widget)
-        RaidCalendar:Debug(widget:GetUserData("tooltip"));
+        --RaidCalendar:Debug(widget:GetUserData("tooltip"));
         GameTooltip_SetDefaultAnchor( GameTooltip, UIParent );
         GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR");
         GameTooltip:SetText(widget:GetUserData("tooltip"));
