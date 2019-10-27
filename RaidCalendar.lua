@@ -242,6 +242,12 @@ function RaidCalendar:GetRaidSignups(raidId)
     tinsert(signupsSorted, charSignup);
   end
   sort(signupsSorted, function(a, b)
+    if (not a.ackTime) then
+      return true;
+    end
+    if (not b.ackTime) then
+      return false;
+    end
     return a.ackTime < b.ackTime;
   end);
   return signupsSorted;
