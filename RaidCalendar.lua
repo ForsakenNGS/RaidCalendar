@@ -393,7 +393,13 @@ function RaidCalendar:ParseActionEntry(index, action)
     local playerName = UnitName("player");
     if (self.db.factionrealm.raids[action.data.raidId] ~= nil) then
       -- Raid exists, add/update signup
+      local timeFirst = action.timestamp;
+      if (self.db.factionrealm.raids[action.data.raidId].signups[action.data.character]) then
+        timeFirst = self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].timeFirst;
+      end
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character] = clonetable(action.data);
+      self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].timeFirst = timeFirst;
+      self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].timeLast = action.timestamp;
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].ack = false;
       if (action.data.character == playerName) then
         self.db.factionrealm.raids[action.data.raidId].signedUp = self.db.factionrealm.raids[action.data.raidId].signups[playerName];

@@ -3,6 +3,8 @@ local L = LibStub("AceLocale-3.0"):NewLocale("RaidCalendar", "enUS", true);
 
 L["TITLE"] = "Raid Calendar";
 
+L["DATE_FORMAT"] = "%m.%d.%Y %H:%M:%S";
+
 L["OPTION_DEBUG_NAME"] = "Debugging output";
 L["OPTION_DEBUG_DESC"] = "Prints debug messages in the chat";
 L["OPTION_SHOW_CALENDAR"] = "Open Calendar";
@@ -19,12 +21,23 @@ L["STATUS_SHORT_SIGNED_UP"] = "Avail";
 L["STATUS_SHORT_UNSURE"] = "Unsure";
 L["STATUS_SHORT_NOT_AVAILABLE"] = "N/A";
 L["STATUS_SHORT_LATE"] = "Late";
+
 L["ROLE_TANK"] = "Tank";
 L["ROLE_HEALER"] = "Healer";
 L["ROLE_CASTER"] = "Caster (DD)";
 L["ROLE_AUTOATTACKER"] = "Physical (DD)";
 L["ROLE_FLEX_TANK"] = "Tank/DD";
 L["ROLE_FLEX_HEAL"] = "Heal/DD";
+
+L["CLASS_HUNTER"] = "Hunter";
+L["CLASS_WARLOCK"] = "Warlock";
+L["CLASS_PRIEST"] = "Priest";
+L["CLASS_PALADIN"] = "Paladin";
+L["CLASS_MAGE"] = "Mage";
+L["CLASS_ROGUE"] = "Rogue";
+L["CLASS_DRUID"] = "Druid";
+L["CLASS_SHAMAN"] = "Shaman";
+L["CLASS_WARRIOR"] = "Warrior";
 
 L["RAID_MC"] = "Moten Core";
 L["RAID_Ony"] = "Onyxia";
@@ -50,6 +63,7 @@ L["FRAME_CREATE_TITLE_NEW"] = "Create new Raid";
 L["FRAME_CREATE_TITLE_EDIT"] = "Edit existing Raid";
 
 L["FRAME_SIGNUP_TITLE"] = "Signup for Raid";
+L["FRAME_SIGNUP_STATUS"] = "Status";
 L["FRAME_SIGNUP_CHAR"] = "Character";
 L["FRAME_SIGNUP_ROLE"] = "Role";
 L["FRAME_SIGNUP_NOTES"] = "Notes";
@@ -61,3 +75,4 @@ L["FRAME_SIGNUP_TAB_SIGNUP"] = "Signup";
 L["FRAME_SIGNUP_STATUS_ACK"] = "Signup successfully sent";
 L["FRAME_SIGNUP_STATUS_PENDING"] = "Signup pending...";
 L["FRAME_SIGNUP_STATUS_OPEN"] = "Not signed up yet!";
+L["FRAME_SIGNUP_TIME"] = "Signup time";

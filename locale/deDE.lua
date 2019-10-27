@@ -6,6 +6,8 @@ end
 
 L["TITLE"] = "Raid Kalender";
 
+L["DATE_FORMAT"] = "%d.%m.%Y %H:%M:%S";
+
 L["OPTION_DEBUG_NAME"] = "Debug-Ausgaben";
 L["OPTION_DEBUG_DESC"] = "Gibt Debug-Ausgaben im Chat aus";
 L["OPTION_SHOW_CALENDAR"] = "Kalender öffnen";
@@ -22,12 +24,23 @@ L["STATUS_SHORT_SIGNED_UP"] = "Verfüg.";
 L["STATUS_SHORT_UNSURE"] = "Unsicher";
 L["STATUS_SHORT_NOT_AVAILABLE"] = "Abwes.";
 L["STATUS_SHORT_LATE"] = "Spät";
+
 L["ROLE_TANK"] = "Tank";
 L["ROLE_HEALER"] = "Heiler";
 L["ROLE_CASTER"] = "Caster (DD)";
 L["ROLE_AUTOATTACKER"] = "Physisch (DD)";
 L["ROLE_FLEX_TANK"] = "Tank/DD";
 L["ROLE_FLEX_HEAL"] = "Heal/DD";
+
+L["CLASS_HUNTER"] = "Jäger";
+L["CLASS_WARLOCK"] = "Hexenmeister";
+L["CLASS_PRIEST"] = "Priester";
+L["CLASS_PALADIN"] = "Palading";
+L["CLASS_MAGE"] = "Magier";
+L["CLASS_ROGUE"] = "Schurke";
+L["CLASS_DRUID"] = "Druide";
+L["CLASS_SHAMAN"] = "Schamane";
+L["CLASS_WARRIOR"] = "Krieger";
 
 L["RAID_MC"] = "Geschmolzener Kern";
 L["RAID_Ony"] = "Onyxia";
@@ -54,6 +67,7 @@ L["FRAME_CREATE_TITLE_NEW"] = "Neuen Raid erstellen";
 L["FRAME_CREATE_TITLE_EDIT"] = "Raid bearbeiten";
 
 L["FRAME_SIGNUP_TITLE"] = "Zum Raid anmelden";
+L["FRAME_SIGNUP_STATUS"] = "Status";
 L["FRAME_SIGNUP_CHAR"] = "Charakter";
 L["FRAME_SIGNUP_ROLE"] = "Rolle";
 L["FRAME_SIGNUP_NOTES"] = "Notizen";
@@ -65,3 +79,4 @@ L["FRAME_SIGNUP_TAB_SIGNUP"] = "Anmelden";
 L["FRAME_SIGNUP_STATUS_ACK"] = "Anmeldung erfolgreich verschickt";
 L["FRAME_SIGNUP_STATUS_PENDING"] = "Anmeldung steht noch aus...";
 L["FRAME_SIGNUP_STATUS_OPEN"] = "Noch nicht angemeldet!";
+L["FRAME_SIGNUP_TIME"] = "Zeitpunkt";

@@ -116,7 +116,7 @@ function RaidSignupFrame:ShowTabPlayers()
   labelNumber:SetHeight(24);
   labelNumber:SetFont("Fonts\\FRIZQT__.TTF", 14)
   local labelStatus = AceGUI:Create("Label");
-  labelStatus:SetText("Status");
+  labelStatus:SetText(L["FRAME_SIGNUP_STATUS"]);
   labelStatus:SetWidth(48);
   labelStatus:SetHeight(24);
   labelStatus:SetFont("Fonts\\FRIZQT__.TTF", 14)
@@ -152,6 +152,7 @@ function RaidSignupFrame:ShowTabPlayers()
   if (self.raidData) then
     local players = RaidCalendar:GetRaidSignups(self.raidData.id);
     for signupIndex, signupPlayer in pairs(players) do
+      local tooltip = "";
       local valueNumber = AceGUI:Create("Label");
       valueNumber:SetText(signupIndex);
       valueNumber:SetWidth(32);
@@ -163,9 +164,12 @@ function RaidSignupFrame:ShowTabPlayers()
       valueStatus:SetWidth(48);
       valueStatus:SetFullHeight(true);
       valueStatus:SetFont("Fonts\\FRIZQT__.TTF", 10)
+      tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_STATUS"]..": "..valueStatusColor..L["STATUS_SHORT_"..signupPlayer.status].."\n";
       local iconCharacter = AceGUI:Create("Icon");
+      local classText = "";
       if (signupPlayer.class) then
         iconCharacter:SetImage(RaidCalendar.classIcons[signupPlayer.class]);
+        classText = L["CLASS_"..signupPlayer.class];
       end
       iconCharacter:SetImageSize(16, 16);
       iconCharacter:SetHeight(24);
@@ -179,7 +183,9 @@ function RaidSignupFrame:ShowTabPlayers()
       valueCharacter:SetText(signupPlayer.character);
       valueCharacter:SetWidth(116);
       valueCharacter:SetFullHeight(true);
-      valueCharacter:SetFont("Fonts\\FRIZQT__.TTF", 14)
+      valueCharacter:SetFont("Fonts\\FRIZQT__.TTF", 14);
+      tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_CHAR"]..": "..RaidCalendar:GetColorHex(charColor)
+        ..signupPlayer.character.." "..classText.."\n";
       local iconRole = AceGUI:Create("Icon");
       iconRole:SetImage(RaidCalendar.roleIcons[signupPlayer.role]);
       iconRole:SetImageSize(16, 16);
@@ -190,15 +196,16 @@ function RaidSignupFrame:ShowTabPlayers()
       valueRole:SetWidth(116);
       valueRole:SetFullHeight(true);
       valueRole:SetFont("Fonts\\FRIZQT__.TTF", 14)
+      tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_ROLE"]..": |cffffff80"..L["ROLE_"..signupPlayer.role].."\n";
       local valueNotes = AceGUI:Create("InteractiveLabel");
-      valueNotes:SetText(signupPlayer.notes);
+      valueNotes:SetText( strsub(signupPlayer.notes, 0, 8).."..." );
       valueNotes:SetWidth(116);
-      valueNotes:SetFullHeight(true);
       valueNotes:SetFont("Fonts\\FRIZQT__.TTF", 14)
       local tableRow = AceGUI:Create("SimpleGroup");
       tableRow:SetLayout("Flow");
       tableRow:SetWidth(476 + 16);
-      tableRow:SetHeight(16);
+      tableRow:SetHeight(24);
+      tableRow:SetAutoAdjustHeight(false);
       tableRow:AddChild(valueNumber);
       tableRow:AddChild(valueStatus);
       tableRow:AddChild(iconCharacter);
@@ -206,6 +213,28 @@ function RaidSignupFrame:ShowTabPlayers()
       tableRow:AddChild(iconRole);
       tableRow:AddChild(valueRole);
       tableRow:AddChild(valueNotes);
+      tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_TIME"]..": |cffffff80"
+        ..date(L["DATE_FORMAT"], signupPlayer.timeFirst).." - "..date(L["DATE_FORMAT"], signupPlayer.timeLast).."\n"
+        .."|cffffffff"..L["FRAME_SIGNUP_NOTES"]..":\n".."|cffffff80"..signupPlayer.notes;
+      local tooltipShow = function(widget)
+        RaidCalendar:Debug(widget:GetUserData("tooltip"));
+        GameTooltip_SetDefaultAnchor( GameTooltip, UIParent );
+        GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR");
+        GameTooltip:SetText(widget:GetUserData("tooltip"));
+        GameTooltip:Show();
+      end;
+      local tooltipHide = function(widget)
+        GameTooltip:Hide();
+      end;
+      iconCharacter:SetUserData("tooltip", tooltip);
+      iconCharacter:SetCallback("OnEnter", tooltipShow);
+      iconCharacter:SetCallback("OnLeave", tooltipHide);
+      iconRole:SetUserData("tooltip", tooltip);
+      iconRole:SetCallback("OnEnter", tooltipShow);
+      iconRole:SetCallback("OnLeave", tooltipHide);
+      valueNotes:SetUserData("tooltip", tooltip);
+      valueNotes:SetCallback("OnEnter", tooltipShow);
+      valueNotes:SetCallback("OnLeave", tooltipHide);
       tableBody:AddChild(tableRow);
     end
   end
