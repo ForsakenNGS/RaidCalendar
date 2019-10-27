@@ -62,14 +62,14 @@ local methods = {
 	["UpdateColors"] = function(self)
 		if self.active then
 			self.day:SetTextColor(1, 1, 1);
-			self.backgroundOuter:SetColorTexture(1, 1, 1, 0.6);
+			self.backgroundOuter:SetColorTexture(1, 1, 1, 0.4);
 		else
 			if self.muted then
 				self.day:SetTextColor(1, 1, 1);
-				self.backgroundOuter:SetColorTexture(0.4, 0.4, 0.4, 0.6);
+				self.backgroundOuter:SetColorTexture(0.4, 0.4, 0.4, 0.4);
 			else
 				self.day:SetTextColor(0.8, 0.8, 0.4);
-				self.backgroundOuter:SetColorTexture(0.8, 0.8, 0.4, 0.6);
+				self.backgroundOuter:SetColorTexture(0.8, 0.8, 0.4, 0.4);
 			end
 		end
 	end
@@ -88,11 +88,11 @@ local function Constructor()
 	frame:SetScript("OnMouseDown", Frame_OnClick);
 
 	local backgroundOuter = frame:CreateTexture(nil, "BORDER");
-	backgroundOuter:SetColorTexture(0.4, 0.4, 0.4, 0.6);
+	backgroundOuter:SetColorTexture(0.4, 0.4, 0.4, 0.4);
 	backgroundOuter:SetPoint("TOPLEFT", 2, -2);
 	backgroundOuter:SetPoint("BOTTOMRIGHT", -2, 2);
 	local backgroundInner = frame:CreateTexture(nil, "ARTWORK");
-	backgroundInner:SetColorTexture(0, 0, 0, 0.6);
+	backgroundInner:SetColorTexture(0, 0, 0, 0.8);
 	backgroundInner:SetPoint("TOPLEFT", 3, -3);
 	backgroundInner:SetPoint("BOTTOMRIGHT", -3, 3);
 
