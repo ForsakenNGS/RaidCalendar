@@ -50,21 +50,16 @@ for week = 1, 6 do
   frameWeek:SetLayout("Flow");
   frameWeek:SetFullWidth(true);
   for day = 1, 7 do
-    local frameDay = AceGUI:Create("InlineGroup");
+    local frameDay = AceGUI:Create("CalendarDay");
     frameDay:SetWidth(80);
-    frameDay:SetTitle("?")
-    local frameDayLabel = AceGUI:Create("InteractiveLabel");
-    frameDayLabel:SetWidth(64);
-    frameDayLabel:SetText("\n");
-    frameDayLabel:SetCallback("OnClick", function(widget, event, button) RaidCalendarFrame:OnClickDay(widget, button) end);
-    frameDayLabel:SetCallback("OnEnter", function(widget) RaidCalendarFrame:OnEnterDay(widget) end);
-    frameDayLabel:SetCallback("OnLeave", function(widget) RaidCalendarFrame:OnLeaveDay(widget) end);
-    frameDay:AddChild(frameDayLabel);
+    frameDay:SetHeight(60);
+    frameDay:SetDay("?");
+    frameDay:SetText("...");
+    frameDay:SetCallback("OnClick", function(widget, event, button) RaidCalendarFrame:OnClickDay(widget, button) end);
+    frameDay:SetCallback("OnEnter", function(widget) RaidCalendarFrame:OnEnterDay(widget) end);
+    frameDay:SetCallback("OnLeave", function(widget) RaidCalendarFrame:OnLeaveDay(widget) end);
     frameWeek:AddChild(frameDay);
-    framesDays[week][day] = {
-      week = frameWeek,
-      group = frameDay, label = frameDayLabel
-    };
+    framesDays[week][day] = { week = frameWeek, frame = frameDay };
   end
   RaidCalendarFrame:AddChild(frameWeek);
 end
@@ -140,6 +135,9 @@ function RaidCalendarFrame:UpdateMonth()
     hour = 0, min = 0, sec = 1, isdst = false
   });
   local dayWeekday = tonumber(date("%u", dayTimeStart));
+  if (RaidCalendar:GetStartWithMonday()) then
+    dayWeekday = mod(dayWeekday - 1, 7);
+  end
   -- Set month header
   self.frames.currentMonth:SetText( date("%B %Y", dayTimeStart) );
   -- Go back to first day of week
@@ -156,13 +154,13 @@ function RaidCalendarFrame:UpdateMonth()
       end
       -- Day box
       local dateStr = date("%Y-%m-%d", dayTime);
-      local text = "";
-      if (date("%Y-%m-%d") == date("%Y-%m-%d", dayTime)) then
-        text = "|cffffffff"..date("%d", dayTime);
-      elseif (tonumber(date("%m", dayTime)) == self.curMonth) then
-        text = "|cffffff80"..date("%d", dayTime);
+      local dayFrame = self.frames.days[week][day].frame;
+      dayFrame:SetDay( date("%d", dayTime) );
+      if (date("%Y-%m-%d") == dateStr) then
+        dayFrame:SetActive(true);
       else
-        text = "|cff404040"..date("%d", dayTime);
+        dayFrame:SetActive(false);
+        dayFrame:SetMuted(tonumber(date("%m", dayTime)) ~= self.curMonth);
       end
       local raids = RaidCalendar:GetRaids(dateStr);
       local raidText = "";
@@ -185,15 +183,11 @@ function RaidCalendarFrame:UpdateMonth()
         end
         raidText = raidText..raidData.timeInvite.." "..raidInstance;
       end
-      if #(raids) < 2 then
-        raidText = raidText.."\n";
-      end
-      self.frames.days[week][day].group:SetTitle(text);
-      self.frames.days[week][day].label:SetText(raidText);
-      self.frames.days[week][day].label:SetUserData("weekIndex", week);
-      self.frames.days[week][day].label:SetUserData("dayIndex", day);
-      self.frames.days[week][day].label:SetUserData("dateStr", dateStr);
-      self.frames.days[week][day].label:SetUserData("dateLabel", date("%a, %e. %b", dayTime));
+      dayFrame:SetText(raidText);
+      dayFrame:SetUserData("weekIndex", week);
+      dayFrame:SetUserData("dayIndex", day);
+      dayFrame:SetUserData("dateStr", dateStr);
+      dayFrame:SetUserData("dateLabel", date("%a, %e. %b", dayTime));
       dayTime = dayTime + 86400;
     end
   end

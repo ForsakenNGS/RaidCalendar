@@ -10,6 +10,8 @@ L["DATE_FORMAT"] = "%d.%m.%Y %H:%M:%S";
 
 L["OPTION_DEBUG_NAME"] = "Debug-Ausgaben";
 L["OPTION_DEBUG_DESC"] = "Gibt Debug-Ausgaben im Chat aus";
+L["OPTION_START_ON_MONDAY_NAME"] = "Montag als ersten Wochentag";
+L["OPTION_START_ON_MONDAY_DESC"] = "Beim Kalender Montag (anstatt Sonntag) als ersten Wochentag anzeigen";
 L["OPTION_SHOW_CALENDAR"] = "Kalender öffnen";
 L["OPTION_SHOW_CALENDAR_DESC"] = "Das Kalender-Fenster öffnen";
 L["OPTION_ADD_CHARACTER"] = "Char. hinzufügen";

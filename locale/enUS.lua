@@ -7,6 +7,8 @@ L["DATE_FORMAT"] = "%m.%d.%Y %H:%M:%S";
 
 L["OPTION_DEBUG_NAME"] = "Debugging output";
 L["OPTION_DEBUG_DESC"] = "Prints debug messages in the chat";
+L["OPTION_START_ON_MONDAY_NAME"] = "Start calendar on monday";
+L["OPTION_START_ON_MONDAY_DESC"] = "Start calendar with monday as the first day (instead of sunday)";
 L["OPTION_SHOW_CALENDAR"] = "Open Calendar";
 L["OPTION_SHOW_CALENDAR_DESC"] = "Open the calendar window";
 L["OPTION_ADD_CHARACTER"] = "Add character";

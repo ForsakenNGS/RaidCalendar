@@ -232,7 +232,7 @@ function RaidCalendar:CanEditRaids()
 end
 
 function RaidCalendar:IsOwnRaid(raidData)
-  for charName, charDetails in pairs(RaidCalendar.syncDb.factionrealm.characters) do
+  for charName, charDetails in pairs(self.syncDb.factionrealm.characters) do
     if (raidData.createdBy == charName) then
       return true;
     end
@@ -244,13 +244,18 @@ end
 -- Options                                                                    --
 --------------------------------------------------------------------------------
 
+function RaidCalendar:GetStartWithMonday()
+  return self.db.profile.calendarStartOnMonday;
+end
+
 function RaidCalendar:GetDefaultOptions()
   return {
     char = {
       debug = true
     },
     profile = {
-      minimap = { hide = false }
+      minimap = { hide = false },
+      calendarStartOnMonday = true
     },
     factionrealm = {
       characters = {},
@@ -303,6 +308,16 @@ function RaidCalendar:InitOptions()
           RaidCalendar.db.char.debug = val;
         end,
         get = function(info) return RaidCalendar.db.char.debug; end
+      },
+      calendarStartOnMonday = {
+        name = L["OPTION_START_ON_MONDAY_NAME"],
+        desc = L["OPTION_START_ON_MONDAY_DESC"],
+        type = "toggle",
+        order = 110,
+        set = function(info,val)
+          RaidCalendar.db.profile.calendarStartOnMonday = val;
+        end,
+        get = function(info) return RaidCalendar.db.profile.calendarStartOnMonday; end
       }
     }
   }
