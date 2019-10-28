@@ -80,3 +80,4 @@ L["FRAME_SIGNUP_STATUS_ACK"] = "Signup successfully sent";
 L["FRAME_SIGNUP_STATUS_PENDING"] = "Signup pending...";
 L["FRAME_SIGNUP_STATUS_OPEN"] = "Not signed up yet!";
 L["FRAME_SIGNUP_TIME"] = "Signup time";
+L["FRAME_SIGNUP_NONE_PLANNED"] = "No raid planned yet.";

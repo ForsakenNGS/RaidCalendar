@@ -1,6 +1,12 @@
 local AceGUI = LibStub("AceGUI-3.0");
 local L = LibStub("AceLocale-3.0"):GetLocale("RaidCalendar");
 
+local tabsConfig = {
+  { value = "overview", text = L["FRAME_SIGNUP_TAB_OVERVIEW"], disabled = false },
+  { value = "players", text = L["FRAME_SIGNUP_TAB_PLAYERS"], disabled = false },
+  { value = "signup", text = L["FRAME_SIGNUP_TAB_SIGNUP"], disabled = false }
+};
+
 RaidSignupFrame = AceGUI:Create("Frame");
 RaidSignupFrame:SetTitle(L["FRAME_SIGNUP_TITLE"]);
 RaidSignupFrame:SetLayout("Flow");
@@ -128,6 +134,13 @@ function RaidSignupFrame:ShowTabOverview()
     tabOverview:SetLayout("Flow");
     tabOverview:AddChild(infoHeader);
     tabOverview:AddChild(infoDetails);
+  else
+    local labelNone = AceGUI:Create("Label");
+    labelNone:SetText(L["FRAME_SIGNUP_NONE_PLANNED"]);
+    labelNone:SetHeight(24);
+    labelNone:SetFullWidth(true);
+    labelNone:SetFont("Fonts\\FRIZQT__.TTF", 14)
+    tabOverview:AddChild(labelNone);
   end
   self.tabs:AddChild(tabOverview);
 end
@@ -342,7 +355,7 @@ end
 
 function RaidSignupFrame:RefreshTab()
   self.tabs:ReleaseChildren();
-  if self.tabs.tabActive == "overview" then
+  if (self.tabs.tabActive == "overview") or not self.raidData then
     self:ShowTabOverview();
   elseif self.tabs.tabActive == "players" then
     self:ShowTabPlayers();
@@ -362,9 +375,16 @@ function RaidSignupFrame:RefreshTab()
       -- Not signed up
       self:SetStatusText("|cffff0000"..L["FRAME_SIGNUP_STATUS_OPEN"]);
     end
+    -- Enable all tabs
+    tabsConfig[2].disabled = false;
+    tabsConfig[3].disabled = false;
   else
-    self:SetStatusText("");
+    self:SetStatusText(L["FRAME_SIGNUP_NONE_PLANNED"]);
+    -- Disable all but overview
+    tabsConfig[2].disabled = true;
+    tabsConfig[3].disabled = true;
   end
+  self.tabs:SetTabs(tabsConfig);
 end
 
 function RaidSignupFrame:OnSave(button, status, character, role, notes)
@@ -421,11 +441,7 @@ raidRow:AddChild(btnCreate);
 RaidSignupFrame:AddChild(raidRow);
 
 local tabs = AceGUI:Create("TabGroup");
-tabs:SetTabs({
-  { value = "overview", text = L["FRAME_SIGNUP_TAB_OVERVIEW"] },
-  { value = "players", text = L["FRAME_SIGNUP_TAB_PLAYERS"] },
-  { value = "signup", text = L["FRAME_SIGNUP_TAB_SIGNUP"] }
-});
+tabs:SetTabs(tabsConfig);
 tabs:SetFullWidth(true);
 tabs:SetFullHeight(true);
 tabs:SelectTab("overview");
