@@ -3,7 +3,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale("RaidCalendar");
 
 local tabsConfig = {
   { value = "overview", text = L["FRAME_SIGNUP_TAB_OVERVIEW"], disabled = false },
-  { value = "players", text = L["FRAME_SIGNUP_TAB_PLAYERS"], disabled = false },
+  { value = "playersSignedUp", text = L["FRAME_SIGNUP_TAB_PLAYERS_SIGNED_UP"], disabled = false },
+  { value = "playersConfirmed", text = L["FRAME_SIGNUP_TAB_PLAYERS_CONFIRMED"], disabled = false },
   { value = "signup", text = L["FRAME_SIGNUP_TAB_SIGNUP"], disabled = false }
 };
 
@@ -68,6 +69,7 @@ function RaidSignupFrame:ShowTabOverview()
     local raidTimes = "|cffffffff"..self.raidData.timeInvite.."|cffffff80 - "..L["FRAME_GENERIC_INVITE"].."\n"
       .."|cffffffff"..self.raidData.timeStart.."|cffffff80 - "..L["FRAME_GENERIC_START"].."\n"
       .."|cffffffff"..self.raidData.timeEnd.."|cffffff80 - "..L["FRAME_GENERIC_END"].."";
+    local raidCreatedBy = "|cffffffff"..L["FRAME_GENERIC_CREATED_BY"]..": |cffffff80"..self.raidData.createdBy;
     local labelInstance = AceGUI:Create("Label");
     labelInstance:SetText(raidInstance);
     labelInstance:SetHeight(24);
@@ -78,62 +80,79 @@ function RaidSignupFrame:ShowTabOverview()
     labelTimes:SetHeight(24);
     labelTimes:SetFullWidth(true);
     labelTimes:SetFont("Fonts\\FRIZQT__.TTF", 12)
+    local infoDetails = AceGUI:Create("Label");
+    infoDetails:SetText(raidCreatedBy.."\n|cffC0C0C0"..self.raidData.details);
+    infoDetails:SetFullWidth(true);
+    infoDetails:SetFont("Fonts\\FRIZQT__.TTF", 12);
     local infoBase = AceGUI:Create("SimpleGroup");
-    infoBase:SetWidth(160);
-    infoBase:SetFullHeight(true);
-    infoBase:SetLayout("Flow");
+    --infoBase:SetRelativeWidth(0.4);
+    --infoBase:SetFullHeight(true);
+    infoBase:SetWidth(128);
+    infoBase:SetLayout("List");
     infoBase:AddChild(labelInstance);
     infoBase:AddChild(labelTimes);
+    infoBase:AddChild(infoDetails);
     -- Statistics
+    local headStatsRoles = AceGUI:Create("Heading");
+    headStatsRoles:SetFullWidth(true);
+    headStatsRoles:SetText(L["FRAME_SIGNUP_ROLE"]);
     local infoStatsRoles = AceGUI:Create("SimpleGroup");
+    infoStatsRoles:SetFullWidth(true);
     infoStatsRoles:SetLayout("Flow");
     for roleName, roleCount in pairs(self.raidData.roleStats) do
       local iconRole = AceGUI:Create("Icon");
       iconRole:SetImage(RaidCalendar.roleIcons[roleName]);
       iconRole:SetImageSize(24, 24);
-      iconRole:SetLabel(roleCount);
-      iconRole:SetHeight(48);
-      iconRole:SetWidth(28);
-      iconRole:SetUserData("tooltip", L["ROLE_"..roleName]);
+      iconRole:SetLabel("|cff00ff00"..roleCount.confirmed.."|cffffffff/|cffffff00"..roleCount.overall);
+      iconRole:SetHeight(40);
+      iconRole:SetWidth(52);
+      iconRole:SetUserData("tooltip", "|cffffffff"..L["ROLE_"..roleName].."\n"
+        .."|cffffff00"..roleCount.overall.." "..L["FRAME_SIGNUP_TAB_PLAYERS_SIGNED_UP"].."\n"
+        .."|cff00ff00"..roleCount.confirmed.." "..L["FRAME_SIGNUP_TAB_PLAYERS_CONFIRMED"]);
       iconRole:SetCallback("OnEnter", tooltipShow);
       iconRole:SetCallback("OnLeave", tooltipHide);
+      iconRole.label:SetFont("Fonts\\FRIZQT__.TTF", 12, "THICKOUTLINE");
       infoStatsRoles:AddChild(iconRole);
     end
+    local headStatsClasses = AceGUI:Create("Heading");
+    headStatsClasses:SetFullWidth(true);
+    headStatsClasses:SetText(L["FRAME_SIGNUP_CLASS"]);
     local infoStatsClasses = AceGUI:Create("SimpleGroup");
+    infoStatsClasses:SetFullWidth(true);
     infoStatsClasses:SetLayout("Flow");
     for className, classCount in pairs(self.raidData.classStats) do
       local iconClass = AceGUI:Create("Icon");
       iconClass:SetImage(RaidCalendar.classIcons[className]);
       iconClass:SetImageSize(24, 24);
-      iconClass:SetLabel(classCount);
-      iconClass:SetHeight(48);
-      iconClass:SetWidth(28);
-      iconClass:SetUserData("tooltip", L["CLASS_"..className]);
+      iconClass:SetLabel("|cff00ff00"..classCount.confirmed.."|cffffffff/|cffffff00"..classCount.overall);
+      iconClass:SetHeight(40);
+      iconClass:SetWidth(52);
+      iconClass:SetUserData("tooltip", "|cffffffff"..L["CLASS_"..className].."\n"
+        .."|cffffff00"..classCount.overall.." "..L["FRAME_SIGNUP_TAB_PLAYERS_SIGNED_UP"].."\n"
+        .."|cff00ff00"..classCount.confirmed.." "..L["FRAME_SIGNUP_TAB_PLAYERS_CONFIRMED"]);
       iconClass:SetCallback("OnEnter", tooltipShow);
       iconClass:SetCallback("OnLeave", tooltipHide);
+      iconClass.label:SetFont("Fonts\\FRIZQT__.TTF", 12, "THICKOUTLINE");
       infoStatsClasses:AddChild(iconClass);
     end
     local infoStats = AceGUI:Create("SimpleGroup");
-    infoStats.alignoffset = 32;
     infoStats:SetLayout("Flow");
+    infoStats:AddChild(headStatsRoles);
     infoStats:AddChild(infoStatsRoles);
+    infoStats:AddChild(headStatsClasses);
     infoStats:AddChild(infoStatsClasses);
-    -- Detail text
-    local infoDetails = AceGUI:Create("Label");
-    infoDetails:SetText("|cffC0C0C0\n"..self.raidData.details);
-    infoDetails:SetFullWidth(true);
-    infoDetails:SetFont("Fonts\\FRIZQT__.TTF", 12);
-    -- Info header group
-    local infoHeader = AceGUI:Create("SimpleGroup");
-    infoHeader:SetFullWidth(true);
-    infoHeader:SetLayout("Flow");
-    infoHeader:AddChild(infoBase);
-    infoHeader:AddChild(infoStats);
     -- Tab content
     tabOverview:SetFullWidth(true);
-    tabOverview:SetLayout("Flow");
-    tabOverview:AddChild(infoHeader);
-    tabOverview:AddChild(infoDetails);
+    tabOverview:SetLayout(nil);
+    tabOverview:AddChild(infoBase);
+    tabOverview:AddChild(infoStats);
+    -- Main positioning
+    infoBase.frame:ClearAllPoints();
+  	infoBase.frame:SetPoint("TOPLEFT", 0, 0);
+  	infoBase.frame:SetPoint("BOTTOMRIGHT", infoBase.frame:GetParent(), "BOTTOMLEFT", 140, 0);
+    infoStats.frame:ClearAllPoints();
+  	infoStats.frame:SetPoint("TOPLEFT", 148, 0);
+  	infoStats.frame:SetPoint("BOTTOMRIGHT", 0, 0);
   else
     local labelNone = AceGUI:Create("Label");
     labelNone:SetText(L["FRAME_SIGNUP_NONE_PLANNED"]);
@@ -145,13 +164,29 @@ function RaidSignupFrame:ShowTabOverview()
   self.tabs:AddChild(tabOverview);
 end
 
-function RaidSignupFrame:ShowTabPlayers()
+function RaidSignupFrame:ShowTabPlayers(players)
   -- Header
-  local labelNumber = AceGUI:Create("Label");
-  labelNumber:SetText("#");
-  labelNumber:SetWidth(32);
-  labelNumber:SetHeight(24);
-  labelNumber:SetFont("Fonts\\FRIZQT__.TTF", 14)
+  local numberOrCheckboxHeader = nil;
+  if (RaidCalendar:IsOwnRaid(self.raidData)) then
+    local checkboxAllPlayers = AceGUI:Create("CheckBox");
+    checkboxAllPlayers:SetWidth(32);
+    checkboxAllPlayers:SetCallback("OnValueChanged", function(widget)
+      local countChecked = 0;
+      for index, player in ipairs(RaidSignupFrame.playerCheckboxes) do
+        player.checkbox:SetValue( widget:GetValue() );
+        countChecked = countChecked + 1;
+      end
+      RaidSignupFrame:SetStatusText(countChecked.." "..L["FRAME_SIGNUP_PLAYERS_SELECTED"]);
+    end);
+    numberOrCheckboxHeader = checkboxAllPlayers;
+  else
+    local labelNumber = AceGUI:Create("Label");
+    labelNumber:SetText("#");
+    labelNumber:SetWidth(32);
+    labelNumber:SetHeight(24);
+    labelNumber:SetFont("Fonts\\FRIZQT__.TTF", 14)
+    numberOrCheckboxHeader = labelNumber;
+  end
   local labelStatus = AceGUI:Create("Label");
   labelStatus:SetText(L["FRAME_SIGNUP_STATUS"]);
   labelStatus:SetWidth(48);
@@ -176,7 +211,7 @@ function RaidSignupFrame:ShowTabPlayers()
   tableHeader:SetLayout("Flow");
   tableHeader:SetWidth(476 + 16);
   tableHeader:SetHeight(32);
-  tableHeader:AddChild(labelNumber);
+  tableHeader:AddChild(numberOrCheckboxHeader);
   tableHeader:AddChild(labelStatus);
   tableHeader:AddChild(labelCharacter);
   tableHeader:AddChild(labelRole);
@@ -186,22 +221,43 @@ function RaidSignupFrame:ShowTabPlayers()
   tableBody:SetLayout("List");
   tableBody:SetFullWidth(true);
   tableBody:SetFullHeight(true);
+  self.playerCheckboxes = {};
   if (self.raidData) then
-    local players = RaidCalendar:GetRaidSignups(self.raidData.id);
+    local checkboxChanged = function(widget)
+      local countChecked = 0;
+      for index, player in ipairs(RaidSignupFrame.playerCheckboxes) do
+        if (player.checkbox:GetValue()) then
+          countChecked = countChecked + 1;
+        end
+      end
+      RaidSignupFrame:SetStatusText(countChecked.." "..L["FRAME_SIGNUP_PLAYERS_SELECTED"]);
+    end
     for signupIndex, signupPlayer in pairs(players) do
       local tooltip = "";
-      local valueNumber = AceGUI:Create("Label");
-      valueNumber:SetText(signupIndex);
-      valueNumber:SetWidth(32);
-      valueNumber:SetFullHeight(true);
-      valueNumber:SetFont("Fonts\\FRIZQT__.TTF", 14)
+      local numberOrCheckbox = nil;
+      if (RaidCalendar:IsOwnRaid(self.raidData)) then
+        local checkboxPlayer = AceGUI:Create("CheckBox");
+        checkboxPlayer:SetWidth(32);
+        checkboxPlayer:SetCallback("OnValueChanged", checkboxChanged);
+        tinsert(self.playerCheckboxes, {
+          data = signupPlayer, index = signupIndex, checkbox = checkboxPlayer
+        });
+        numberOrCheckbox = checkboxPlayer;
+      else
+        local valueNumber = AceGUI:Create("Label");
+        valueNumber:SetText(signupIndex);
+        valueNumber:SetWidth(32);
+        valueNumber:SetFullHeight(true);
+        valueNumber:SetFont("Fonts\\FRIZQT__.TTF", 14);
+        numberOrCheckbox = valueNumber;
+      end
       local valueStatus = AceGUI:Create("Label");
       local valueStatusColor = RaidCalendar:GetColorHex(RaidCalendar.statusColors[signupPlayer.status]);
       valueStatus:SetText(valueStatusColor..L["STATUS_SHORT_"..signupPlayer.status]);
       valueStatus:SetWidth(48);
       valueStatus:SetFullHeight(true);
       valueStatus:SetFont("Fonts\\FRIZQT__.TTF", 10)
-      tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_STATUS"]..": "..valueStatusColor..L["STATUS_SHORT_"..signupPlayer.status].."\n";
+      tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_STATUS"]..": "..valueStatusColor..L["STATUS_"..signupPlayer.status].."\n";
       local iconCharacter = AceGUI:Create("Icon");
       local classText = "";
       if (signupPlayer.class) then
@@ -222,7 +278,7 @@ function RaidSignupFrame:ShowTabPlayers()
       valueCharacter:SetFullHeight(true);
       valueCharacter:SetFont("Fonts\\FRIZQT__.TTF", 14);
       tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_CHAR"]..": "..RaidCalendar:GetColorHex(charColor)
-        ..signupPlayer.character.." "..classText.."\n";
+        ..signupPlayer.character.." / "..signupPlayer.level.." "..classText.."\n";
       local iconRole = AceGUI:Create("Icon");
       iconRole:SetImage(RaidCalendar.roleIcons[signupPlayer.role]);
       iconRole:SetImageSize(16, 16);
@@ -243,7 +299,7 @@ function RaidSignupFrame:ShowTabPlayers()
       tableRow:SetWidth(476 + 16);
       tableRow:SetHeight(24);
       tableRow:SetAutoAdjustHeight(false);
-      tableRow:AddChild(valueNumber);
+      tableRow:AddChild(numberOrCheckbox);
       tableRow:AddChild(valueStatus);
       tableRow:AddChild(iconCharacter);
       tableRow:AddChild(valueCharacter);
@@ -357,8 +413,12 @@ function RaidSignupFrame:RefreshTab()
   self.tabs:ReleaseChildren();
   if (self.tabs.tabActive == "overview") or not self.raidData then
     self:ShowTabOverview();
-  elseif self.tabs.tabActive == "players" then
-    self:ShowTabPlayers();
+  elseif self.tabs.tabActive == "playersSignedUp" then
+    local players = RaidCalendar:GetRaidSignups(self.raidData.id);
+    self:ShowTabPlayers(players);
+  elseif self.tabs.tabActive == "playersConfirmed" then
+    local players = RaidCalendar:GetRaidSignups(self.raidData.id, true);
+    self:ShowTabPlayers(players);
   elseif self.tabs.tabActive == "signup" then
     self:ShowTabSignup();
   end
@@ -378,11 +438,13 @@ function RaidSignupFrame:RefreshTab()
     -- Enable all tabs
     tabsConfig[2].disabled = false;
     tabsConfig[3].disabled = false;
+    tabsConfig[4].disabled = false;
   else
     self:SetStatusText(L["FRAME_SIGNUP_NONE_PLANNED"]);
     -- Disable all but overview
     tabsConfig[2].disabled = true;
     tabsConfig[3].disabled = true;
+    tabsConfig[4].disabled = true;
   end
   self.tabs:SetTabs(tabsConfig);
 end

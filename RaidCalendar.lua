@@ -209,10 +209,12 @@ function RaidCalendar:GetRaidDetails(raidId)
   return self.db.factionrealm.raids[raidId];
 end
 
-function RaidCalendar:GetRaidSignups(raidId)
+function RaidCalendar:GetRaidSignups(raidId, filterConfirmed)
   local signupsSorted = {};
   for charName, charSignup in pairs(self.db.factionrealm.raids[raidId].signups) do
-    tinsert(signupsSorted, charSignup);
+    if (filterConfirmed == nil or filterConfirmed == charSignup.confirmed) then
+      tinsert(signupsSorted, charSignup);
+    end
   end
   sort(signupsSorted, function(a, b)
     if (not a.ack) then
@@ -232,6 +234,9 @@ function RaidCalendar:CanEditRaids()
 end
 
 function RaidCalendar:IsOwnRaid(raidData)
+  if not raidData then
+    return false;
+  end
   for charName, charDetails in pairs(self.syncDb.factionrealm.characters) do
     if (raidData.createdBy == charName) then
       return true;
@@ -375,20 +380,26 @@ function RaidCalendar:ParseActionLog()
     raidData.signupCount = 0;
     raidData.classStats = {};
     for className, classColor in pairs(self.classColors) do
-      raidData.classStats[className] = 0;
+      raidData.classStats[className] = { overall = 0, confirmed = 0 };
     end
     raidData.roleStats = {};
     for roleName, roleLabel in pairs(self.roles) do
-      raidData.roleStats[roleName] = 0;
+      raidData.roleStats[roleName] = { overall = 0, confirmed = 0 };
     end
     for charName, signupData in pairs(raidData.signups) do
       if (signupData.status == "SIGNED_UP") or (signupData.status == "LATE") then
         raidData.signupCount = raidData.signupCount + 1;
         if (signupData.class) then
-          raidData.classStats[signupData.class] = raidData.classStats[signupData.class] + 1;
+          raidData.classStats[signupData.class].overall = raidData.classStats[signupData.class].overall + 1;
+          if (signupData.confirmed) then
+            raidData.classStats[signupData.class].confirmed = raidData.classStats[signupData.class].confirmed + 1;
+          end
         end
         if (signupData.role) then
-          raidData.roleStats[signupData.role] = raidData.roleStats[signupData.role] + 1;
+          raidData.roleStats[signupData.role].overall = raidData.roleStats[signupData.role].overall + 1;
+          if (signupData.confirmed) then
+            raidData.roleStats[signupData.role].confirmed = raidData.roleStats[signupData.role].confirmed + 1;
+          end
         end
       end
     end
@@ -422,11 +433,17 @@ function RaidCalendar:ParseActionEntry(index, action)
     local playerName = UnitName("player");
     if (self.db.factionrealm.raids[action.data.raidId] ~= nil) then
       -- Raid exists, add/update signup
+      local confirmed = false;
+      local confirmedTime = false;
       local timeFirst = action.timestamp;
       if (self.db.factionrealm.raids[action.data.raidId].signups[action.data.character]) then
+        confirmed = self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].confirmed;
+        confirmedTime = self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].confirmedTime;
         timeFirst = self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].timeFirst;
       end
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character] = clonetable(action.data);
+      self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].confirmed = confirmed;
+      self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].confirmedTime = confirmedTime;
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].timeFirst = timeFirst;
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].timeLast = action.timestamp;
       self.db.factionrealm.raids[action.data.raidId].signups[action.data.character].ack = false;
