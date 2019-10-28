@@ -184,6 +184,7 @@ function AceCommPeer:SyncPeers()
 end
 
 function AceCommPeer:SyncPeer(distribution, target)
+  local timeNow = self:GetSyncTime();
   local messageData = { type = "SyncReport", known = {} };
   for id, packet in pairs(self.syncDb.factionrealm.packets) do
     if (packet.expires > timeNow) then
