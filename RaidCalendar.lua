@@ -345,13 +345,17 @@ function RaidCalendar:ParseActionLog()
   for raidId, raidData in pairs(self.db.factionrealm.raids) do
     if (self:IsOwnRaid(raidData)) then
       local signupAcks = {};
+      local signupAckTimestamp = self:GetSyncTime();
       for charName, signupData in pairs(raidData.signups) do
         if (not signupData.ack) then
           tinsert(signupAcks, charName);
+          signupAckTimestamp = max(signupAckTimestamp, signupData.timeLast);
         end
       end
       if #(signupAcks) > 0 then
-        self:AddSyncPacket("raidSignupAck", { raidId = raidId, characters = signupAcks });
+        self:AddSyncPacket("raidSignupAck", {
+          raidId = raidId, characters = signupAcks
+        }, signupAckTimestamp);
         return;
       end
     end
