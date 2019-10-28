@@ -147,6 +147,22 @@ function AceCommPeer:SyncDebug(message)
 	self:SendMessage("SYNC_DEBUG", message);
 end
 
+function AceCommPeer:SyncCleanup()
+  local timeNow = self:GetSyncTime();
+  local expiredPackets = {};
+  for id, packet in pairs(self.syncDb.factionrealm.packets) do
+    if (packet.expires <= timeNow) then
+      tinsert(expiredPackets, id);
+    end
+  end
+  if #(expiredPackets) > 0 then
+    self:SyncDebug("Deleting "..#(expiredPackets).." expired messages...");
+    for index, id in ipairs(expiredPackets) do
+      self.syncDb.factionrealm.packets[id] = nil;
+    end
+  end
+end
+
 function AceCommPeer:SyncPeers()
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
@@ -170,7 +186,9 @@ end
 function AceCommPeer:SyncPeer(distribution, target)
   local messageData = { type = "SyncReport", known = {} };
   for id, packet in pairs(self.syncDb.factionrealm.packets) do
-    tinsert(messageData.known, id);
+    if (packet.expires > timeNow) then
+      tinsert(messageData.known, id);
+    end
   end
   self:SyncSend(messageData, distribution, target);
 end
@@ -276,13 +294,16 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
   	self:SyncDebug(messageData.type.." @ "..distribution.." / "..sender..": "..serializeTable(messageData, "data", true));
     self:SyncPeerAdd(sender, distribution);
     if (messageData.type == "SyncReport") then
+      local timeNow = self:GetSyncTime();
       local packetsKnownLocal = {};
       local packetsMissingLocal = {};
       local packetsMissingRemote = {};
       for id, packet in pairs(self.syncDb.factionrealm.packets) do
-        tinsert(packetsKnownLocal, id);
-        if not tContains(messageData.known, id) then
-          tinsert(packetsMissingRemote, id);
+        if (packet.expires > timeNow) then
+          tinsert(packetsKnownLocal, id);
+          if not tContains(messageData.known, id) then
+            tinsert(packetsMissingRemote, id);
+          end
         end
       end
       for index, id in ipairs(messageData.known) do
@@ -341,6 +362,9 @@ end
 --------------------------------------------------------------------------------
 function AceCommPeer:OnEventCommPeer(eventName, ...)
   if (eventName == "PLAYER_ENTERING_WORLD") then
+    -- Cleanup expired packages
+    self:SyncCleanup();
+    -- Update local character list
     local charName = UnitName("player");
     if (self.syncDb.factionrealm.characters[charName] == nil) then
       self.syncDb.factionrealm.characters[charName] = {
@@ -351,6 +375,7 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
     local className, classFilename, classID = UnitClass("player");
     self.syncDb.factionrealm.characters[charName].level = charLevel;
     self.syncDb.factionrealm.characters[charName].class = classFilename;
+    -- Update sync peers
 		self:SyncPeers();
   end
   if (eventName == "PLAYER_ENTERING_WORLD") or (eventName == "GUILD_ROSTER_UPDATE") then
@@ -386,6 +411,7 @@ local mixins = {
 	"GetSyncTime",
 	"GetSyncPacketsSorted",
 	"SyncDebug",
+  "SyncCleanup",
 	"SyncPeers",
 	"SyncPeer",
 	"SyncSend",
