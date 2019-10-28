@@ -299,6 +299,16 @@ function RaidCalendar:InitOptions()
           end
         end
       },
+      reset = {
+        name = L["OPTION_RESET_DATA"],
+        name = L["OPTION_RESET_DATA"],
+        type = "execute",
+        order = 11,
+        func = function(info,val)
+          self:Debug("Reset!");
+          self:SyncClearData();
+        end
+      },
       debug = {
         name = L["OPTION_DEBUG_NAME"],
         desc = L["OPTION_DEBUG_DESC"],

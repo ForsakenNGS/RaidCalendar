@@ -162,6 +162,10 @@ function AceCommPeer:SyncCleanup()
   end
 end
 
+function AceCommPeer:SyncClearData()
+  self.syncDb.factionrealm.packets = {};
+end
+
 function AceCommPeer:SyncPeers()
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
@@ -412,6 +416,7 @@ local mixins = {
 	"GetSyncPacketsSorted",
 	"SyncDebug",
   "SyncCleanup",
+  "SyncClearData",
 	"SyncPeers",
 	"SyncPeer",
 	"SyncSend",
