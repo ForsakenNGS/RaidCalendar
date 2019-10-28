@@ -307,6 +307,10 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
           tinsert(packetsKnownLocal, id);
           if not tContains(messageData.known, id) then
             tinsert(packetsMissingRemote, id);
+            if (#(packetsMissingRemote) >= this.syncMaxPacketsPerRequest) then
+              -- Limit max packet per reply to a reasonable number
+              break;
+            end
           end
         end
       end
@@ -444,6 +448,7 @@ function AceCommPeer:Embed(target)
 	target.syncDb = LibStub("AceDB-3.0"):New(target.name.."PeerSync", target:GetSyncDbDefaults());
 	target.syncChannels = {};
   target.syncTimeStart = GetServerTime() - GetTime();
+  target.syncMaxPacketsPerRequest = 50;
   -- EVENTS
   target:RegisterComm(target.syncCommName, "OnCommReceivedPeer")
   target:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEventCommPeer");
