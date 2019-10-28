@@ -349,7 +349,7 @@ function RaidCalendar:ParseActionLog()
       for charName, signupData in pairs(raidData.signups) do
         if (not signupData.ack) then
           tinsert(signupAcks, charName);
-          signupAckTimestamp = min(signupAckTimestamp, signupData.timeLast);
+          signupAckTimestamp = min(signupAckTimestamp, signupData.timeLast + 0.01);
         end
       end
       if #(signupAcks) > 0 then
