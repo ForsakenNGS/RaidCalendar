@@ -291,10 +291,12 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
         end
       end
       if #(packetsMissingLocal) > 0 then
+        self:Debug("Sending "..#(packetsMissingLocal).." Sync-Packets to "..sender);
         -- Request missing actions from peer
         self:SyncRequestPackets(packetsMissingLocal, "WHISPER", sender);
       end
       if #(packetsMissingRemote) > 0 then
+        self:Debug("Requesting "..#(packetsMissingLocal).." Sync-Packets from "..sender);
         -- Send missing actions to peer
         self:SyncSendPackets(packetsMissingRemote, "WHISPER", sender);
       end
@@ -392,6 +394,7 @@ local mixins = {
 	"SyncPeerAvailable",
 	"SyncBroadcastPackets",
 	"SyncSendPackets",
+  "SyncRequestPackets",
 	"OnSyncPacketsChanged",
 	"OnEventCommPeer",
 	"OnCommReceivedPeer",
