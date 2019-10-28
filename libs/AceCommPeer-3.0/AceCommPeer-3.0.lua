@@ -65,7 +65,6 @@ function AceCommPeer:AddSyncPacket(type, data, timestamp, expires, source, packe
 	if (not source) then
 		source = charName;
 		verified = true;
-		timestamp = self:GetSyncTime();
 	else
 	  for charName, charDetails in pairs(self.syncDb.factionrealm.characters) do
 	    if (source == charName) then
