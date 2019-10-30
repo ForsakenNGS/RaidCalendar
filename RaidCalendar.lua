@@ -194,6 +194,20 @@ function RaidCalendar:Signup(raidId, status, character, level, class, role, note
   return true;
 end
 
+function RaidCalendar:SignupAccept(raidId, characters)
+  self:AddSyncPacket("raidSignupAccept", {
+    raidId = raidId, characters = characters
+  });
+  return true;
+end
+
+function RaidCalendar:SignupDecline(raidId, characters)
+  self:AddSyncPacket("raidSignupDecline", {
+    raidId = raidId, characters = characters
+  });
+  return true;
+end
+
 function RaidCalendar:GetRaids(dateStr)
   local raidList = {};
   for raidId, raidData in pairs(self.db.factionrealm.raids) do
@@ -405,7 +419,12 @@ function RaidCalendar:ParseActionLog()
     end
   end
   -- Update calendar frame
-  RaidCalendarFrame:UpdateMonth();
+  if (RaidCalendarFrame:IsVisible()) then
+    RaidCalendarFrame:UpdateMonth();
+  end
+  if (RaidSignupFrame:IsVisible()) then
+    RaidSignupFrame:RefreshTab();
+  end
   self:Debug("Parsing peer action log done!");
 end
 
@@ -459,6 +478,24 @@ function RaidCalendar:ParseActionEntry(index, action)
         if raid.signups[charName] then
           raid.signups[charName].ack = true;
           raid.signups[charName].ackTime = action.timestamp;
+        end
+      end
+    end
+  elseif (action.type == "raidSignupAccept") then
+    local raid = self.db.factionrealm.raids[action.data.raidId];
+    if raid and (action.source == raid.createdBy) then
+      for charIndex, charName in ipairs(action.data.characters) do
+        if raid.signups[charName] then
+          raid.signups[charName].confirmed = true;
+        end
+      end
+    end
+  elseif (action.type == "raidSignupDecline") then
+    local raid = self.db.factionrealm.raids[action.data.raidId];
+    if raid and (action.source == raid.createdBy) then
+      for charIndex, charName in ipairs(action.data.characters) do
+        if raid.signups[charName] then
+          raid.signups[charName].confirmed = false;
         end
       end
     end

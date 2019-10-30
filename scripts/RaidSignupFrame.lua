@@ -3,9 +3,9 @@ local L = LibStub("AceLocale-3.0"):GetLocale("RaidCalendar");
 
 local tabsConfig = {
   { value = "overview", text = L["FRAME_SIGNUP_TAB_OVERVIEW"], disabled = false },
+  { value = "signup", text = L["FRAME_SIGNUP_TAB_SIGNUP"], disabled = false },
   { value = "playersSignedUp", text = L["FRAME_SIGNUP_TAB_PLAYERS_SIGNED_UP"], disabled = false },
-  { value = "playersConfirmed", text = L["FRAME_SIGNUP_TAB_PLAYERS_CONFIRMED"], disabled = false },
-  { value = "signup", text = L["FRAME_SIGNUP_TAB_SIGNUP"], disabled = false }
+  { value = "playersConfirmed", text = L["FRAME_SIGNUP_TAB_PLAYERS_CONFIRMED"], disabled = false }
 };
 
 RaidSignupFrame = AceGUI:Create("Frame");
@@ -331,8 +331,45 @@ function RaidSignupFrame:ShowTabPlayers(players)
       tableBody:AddChild(tableRow);
     end
   end
+  local tableActions = AceGUI:Create("SimpleGroup");
+  tableActions:SetLayout("Flow");
+  tableActions:SetFullWidth(true);
+  if (RaidCalendar:IsOwnRaid(self.raidData)) then
+    -- Action buttons
+    local btnPlayersAccept = AceGUI:Create("Button");
+    btnPlayersAccept:SetText(L["FRAME_SIGNUP_ACCEPT"]);
+    btnPlayersAccept:SetCallback("OnClick", function(widget)
+      RaidSignupFrame:OnPlayersAccept();
+    end);
+    local btnPlayersDecline = AceGUI:Create("Button");
+    btnPlayersDecline:SetText(L["FRAME_SIGNUP_DECLINE"]);
+    btnPlayersDecline:SetCallback("OnClick", function(widget)
+      RaidSignupFrame:OnPlayersDecline();
+    end);
+    tableActions:AddChild(btnPlayersAccept);
+    tableActions:AddChild(btnPlayersDecline);
+  end
   self.tabs:AddChild(tableHeader);
   self.tabs:AddChild(tableBody);
+  self.tabs:AddChild(tableActions);
+end
+
+function RaidSignupFrame:GetSelectedPlayers()
+  local players = {};
+  for index, player in ipairs(self.playerCheckboxes) do
+    if (player.checkbox:GetValue()) then
+      tinsert(players, player.data.character);
+    end
+  end
+  return players;
+end
+
+function RaidSignupFrame:OnPlayersAccept()
+  RaidCalendar:SignupAccept(self.raidData.id, self:GetSelectedPlayers());
+end
+
+function RaidSignupFrame:OnPlayersDecline()
+  RaidCalendar:SignupDecline(self.raidData.id, self:GetSelectedPlayers());
 end
 
 function RaidSignupFrame:ShowTabSignup()
