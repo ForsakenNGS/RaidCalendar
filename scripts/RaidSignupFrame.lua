@@ -103,7 +103,7 @@ function RaidSignupFrame:ShowTabOverview()
       local iconRole = AceGUI:Create("Icon");
       iconRole:SetImage(RaidCalendar.roleIcons[roleName]);
       iconRole:SetImageSize(24, 24);
-      iconRole:SetLabel("|cff00ff00"..roleCount.confirmed.."|cffffffff/|cffffff00"..roleCount.overall);
+      iconRole:SetLabel(self:GetCountLabel(roleCount.confirmed, roleCount.overall));
       iconRole:SetHeight(40);
       iconRole:SetWidth(52);
       iconRole:SetUserData("tooltip", "|cffffffff"..L["ROLE_"..roleName].."\n"
@@ -124,7 +124,7 @@ function RaidSignupFrame:ShowTabOverview()
       local iconClass = AceGUI:Create("Icon");
       iconClass:SetImage(RaidCalendar.classIcons[className]);
       iconClass:SetImageSize(24, 24);
-      iconClass:SetLabel("|cff00ff00"..classCount.confirmed.."|cffffffff/|cffffff00"..classCount.overall);
+      iconClass:SetLabel(self:GetCountLabel(classCount.confirmed, classCount.overall));
       iconClass:SetHeight(40);
       iconClass:SetWidth(52);
       iconClass:SetUserData("tooltip", "|cffffffff"..L["CLASS_"..className].."\n"
@@ -352,6 +352,18 @@ function RaidSignupFrame:ShowTabPlayers(players)
   self.tabs:AddChild(tableHeader);
   self.tabs:AddChild(tableBody);
   self.tabs:AddChild(tableActions);
+end
+
+function RaidSignupFrame:GetCountLabel(countConfirmed, countSignedUp)
+  if (countSignedUp > 0) then
+    if (countConfirmed == countSignedUp) then
+      return "|cff00ff00"..countConfirmed;
+    else
+      return "|cff00ff00"..countConfirmed.."|cffffffff/|cffffff00"..countSignedUp;
+    end
+  else
+    return "|cff8080800";
+  end
 end
 
 function RaidSignupFrame:GetSelectedPlayers()
