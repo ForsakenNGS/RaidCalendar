@@ -8,16 +8,41 @@ local RaidCalendarIcon = LibStub("LibDataBroker-1.1"):NewDataObject("RaidCalenda
     type = "data source",
     text = L["TITLE"],
     icon = "Interface\\Icons\\inv_scroll_04",
-    OnClick = function()
-      if RaidCalendarFrame:IsVisible() then
-        RaidCalendarFrame:Hide();
+    OnClick = function(frame, button)
+      if (button == "RightButton") then
+        if RaidGroupsFrame:IsVisible() then
+          RaidGroupsFrame:Hide();
+        else
+          RaidGroupsFrame:Show();
+          RaidGroupsFrame:UpdateGroups();
+        end
       else
-        RaidCalendarFrame:Show();
-        RaidCalendarFrame:UpdateMonth();
+        if RaidCalendarFrame:IsVisible() then
+          RaidCalendarFrame:Hide();
+        else
+          RaidCalendarFrame:Show();
+          RaidCalendarFrame:UpdateMonth();
+        end
       end
     end,
 })
 local icon = LibStub("LibDBIcon-1.0");
+
+function RaidCalendarIcon:OnEnter()
+	GameTooltip:SetOwner(self, "ANCHOR_NONE");
+	GameTooltip:SetPoint("TOPLEFT", self, "BOTTOMLEFT");
+	GameTooltip:ClearLines();
+  RaidCalendarIcon.OnTooltipShow(GameTooltip);
+	GameTooltip:Show();
+end
+
+function RaidCalendarIcon:OnLeave()
+  GameTooltip:Hide();
+end
+
+function RaidCalendarIcon:OnTooltipShow()
+  self:AddLine(L["ICON_TOOLTIP"]);
+end
 
 local function clonetable(t, deep)
   local tNew = {};
@@ -51,9 +76,13 @@ function RaidCalendar:OnInitialize()
   self.frames.calendar = RaidCalendarFrame;
   self.frames.signup = RaidSignupFrame;
   self.frames.create = RaidCreateFrame;
+  self.frames.groups = RaidGroupsFrame;
+  self.frames.groupCreate = RaidGroupCreateFrame;
   RaidCalendarFrame:Hide();
   RaidSignupFrame:Hide();
   RaidCreateFrame:Hide();
+  RaidGroupsFrame:Hide();
+  RaidGroupCreateFrame:Hide();
   -- DATA
   self.statusOptions = {};
   self.statusOptions["SIGNED_UP"] = L["STATUS_SIGNED_UP"];
@@ -162,9 +191,9 @@ end
 -- Raid management                                                            --
 --------------------------------------------------------------------------------
 
-function RaidCalendar:AddRaid(dateStr, expires, createdBy, timeInvite, timeStart, timeEnd, instance, comment, details)
+function RaidCalendar:AddRaid(groupId, dateStr, expires, createdBy, timeInvite, timeStart, timeEnd, instance, comment, details)
   -- (type, data, timestamp, expires, source, packetId, verified)
-  local id = self:AddSyncPacket("raidCreate", {
+  local id = self:AddSyncPacket(groupId, "raidCreate", {
     dateStr = dateStr, createdBy = createdBy,
     timeInvite = timeInvite, timeStart = timeStart, timeEnd = timeEnd,
     instance = instance, comment = comment, details = details
@@ -173,7 +202,11 @@ function RaidCalendar:AddRaid(dateStr, expires, createdBy, timeInvite, timeStart
 end
 
 function RaidCalendar:UpdateRaid(id, dateStr, expires, createdBy, timeInvite, timeStart, timeEnd, instance, comment, details)
-  self:AddSyncPacket("raidUpdate", {
+  local raid = self:GetRaidDetails(id);
+  if (raid == nil) then
+    return false;
+  end
+  self:AddSyncPacket(raid.group, "raidUpdate", {
     id = id, dateStr = dateStr, createdBy = createdBy,
     timeInvite = timeInvite, timeStart = timeStart, timeEnd = timeEnd,
     instance = instance, comment = comment, details = details
@@ -182,12 +215,20 @@ function RaidCalendar:UpdateRaid(id, dateStr, expires, createdBy, timeInvite, ti
 end
 
 function RaidCalendar:DeleteRaid(id)
-  self:AddSyncPacket("raidDelete", { id = id });
+  local raid = self:GetRaidDetails(id);
+  if (raid == nil) then
+    return false;
+  end
+  self:AddSyncPacket(raid.group, "raidDelete", { id = id });
   return true;
 end
 
 function RaidCalendar:Signup(raidId, status, character, level, class, role, notes)
-  self:AddSyncPacket("raidSignup", {
+  local raid = self:GetRaidDetails(raidId);
+  if (raid == nil) then
+    return false;
+  end
+  self:AddSyncPacket(raid.group, "raidSignup", {
     raidId = raidId, status = status, notes = notes,
     character = character, level = level, class = class, role = role
   });
@@ -195,14 +236,22 @@ function RaidCalendar:Signup(raidId, status, character, level, class, role, note
 end
 
 function RaidCalendar:SignupAccept(raidId, characters)
-  self:AddSyncPacket("raidSignupAccept", {
+  local raid = self:GetRaidDetails(raidId);
+  if (raid == nil) then
+    return false;
+  end
+  self:AddSyncPacket(raid.group, "raidSignupAccept", {
     raidId = raidId, characters = characters
   });
   return true;
 end
 
 function RaidCalendar:SignupDecline(raidId, characters)
-  self:AddSyncPacket("raidSignupDecline", {
+  local raid = self:GetRaidDetails(raidId);
+  if (raid == nil) then
+    return false;
+  end
+  self:AddSyncPacket(raid.group, "raidSignupDecline", {
     raidId = raidId, characters = characters
   });
   return true;
@@ -282,6 +331,9 @@ function RaidCalendar:GetDefaultOptions()
       raidDefaults = {
         dateStr = "---", timeInvite = "18:30", timeStart = "19:00", timeEnd = "22:00",
         instance = "MC", comment = "", details = ""
+      },
+      groupDefaults = {
+        type = "GUILD", title = "My raid group"
       }
     }
   };
@@ -295,7 +347,7 @@ function RaidCalendar:InitOptions()
     args = {
       show = {
         name = L["OPTION_SHOW_CALENDAR"],
-        name = L["OPTION_SHOW_CALENDAR_DESC"],
+        desc = L["OPTION_SHOW_CALENDAR_DESC"],
         type = "execute",
         order = 10,
         func = function(info,val)
@@ -303,9 +355,19 @@ function RaidCalendar:InitOptions()
           RaidCalendarFrame:UpdateMonth();
         end
       },
+      groups = {
+        name = L["OPTION_SHOW_GROUPS"],
+        desc = L["OPTION_SHOW_GROUPS_DESC"],
+        type = "execute",
+        order = 10,
+        func = function(info,val)
+          RaidGroupsFrame:Show();
+          RaidGroupsFrame:UpdateGroups();
+        end
+      },
       add = {
         name = L["OPTION_ADD_CHARACTER"],
-        name = L["OPTION_ADD_CHARACTER_DESC"],
+        desc = L["OPTION_ADD_CHARACTER_DESC"],
         type = "execute",
         order = 11,
         func = function(info,val)
@@ -320,7 +382,7 @@ function RaidCalendar:InitOptions()
       },
       reset = {
         name = L["OPTION_RESET_DATA"],
-        name = L["OPTION_RESET_DATA"],
+        desc = L["OPTION_RESET_DATA"],
         type = "execute",
         order = 11,
         func = function(info,val)
@@ -382,7 +444,7 @@ function RaidCalendar:ParseActionLog()
         end
       end
       if #(signupAcks) > 0 then
-        self:AddSyncPacket("raidSignupAck", {
+        self:AddSyncPacket(raidData.group, "raidSignupAck", {
           raidId = raidId, characters = signupAcks
         }, signupAckTimestamp);
         return;
@@ -434,6 +496,7 @@ function RaidCalendar:ParseActionEntry(index, action)
     -- Insert the raid
     action.data.id = action.id;
     self.db.factionrealm.raids[action.id] = clonetable(action.data);
+    self.db.factionrealm.raids[action.id].group = action.group;
     self.db.factionrealm.raids[action.id].signedUp = false;
     self.db.factionrealm.raids[action.id].signups = {};
   elseif (action.type == "raidUpdate") then
@@ -443,6 +506,7 @@ function RaidCalendar:ParseActionEntry(index, action)
     local signups = self.db.factionrealm.raids[raidId].signups;
     -- Update the rest
     self.db.factionrealm.raids[raidId] = clonetable(action.data);
+    self.db.factionrealm.raids[raidId].group = action.group;
     self.db.factionrealm.raids[raidId].signedUp = signedUp;
     self.db.factionrealm.raids[raidId].signups = signups;
   elseif (action.type == "raidDelete") then

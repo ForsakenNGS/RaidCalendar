@@ -5,6 +5,7 @@ if not L then
 end
 
 L["TITLE"] = "Raid Kalender";
+L["ICON_TOOLTIP"] = "Raid Kalender\nLinks-Klick: Kalender\nRechts-Klick: Gruppen";
 
 L["DATE_FORMAT"] = "%d.%m.%Y %H:%M:%S";
 
@@ -14,6 +15,8 @@ L["OPTION_START_ON_MONDAY_NAME"] = "Montag als ersten Wochentag";
 L["OPTION_START_ON_MONDAY_DESC"] = "Beim Kalender Montag (anstatt Sonntag) als ersten Wochentag anzeigen";
 L["OPTION_SHOW_CALENDAR"] = "Kalender öffnen";
 L["OPTION_SHOW_CALENDAR_DESC"] = "Das Kalender-Fenster öffnen";
+L["OPTION_SHOW_GROUPS"] = "Raid gruppen anzeigen";
+L["OPTION_SHOW_GROUPS_DESC"] = "Übersicht der Raid-Gruppen öffnen";
 L["OPTION_RESET_DATA"] = "Daten zurücksetzen";
 L["OPTION_RESET_DATA_DESC"] = "Alle lokalen Sync-Daten löschen";
 L["OPTION_ADD_CHARACTER"] = "Char. hinzufügen";
@@ -66,6 +69,16 @@ L["FRAME_GENERIC_SAVE"] = "Speichern";
 L["FRAME_GENERIC_DELETE"] = "Löschen";
 L["FRAME_GENERIC_UPDATE"] = "Ändern";
 L["FRAME_GENERIC_CREATED_BY"] = "Erstellt von";
+
+L["FRAME_GROUPS_TITLE"] = "Raid-Gruppen";
+L["FRAME_GROUPS_PEERS"] = "Peers";
+L["FRAME_GROUPS_DELETE"] = "Löschen";
+
+L["FRAME_GROUP_CREATE_HEADER"] = "Raid-Gruppe erstellen";
+L["FRAME_GROUP_CREATE_TYPE"] = "Art der Gruppe";
+L["FRAME_GROUP_CREATE_TYPE_PERSONAL"] = "Persönlich";
+L["FRAME_GROUP_CREATE_TYPE_GUILD"] = "Gilden-Gruppe";
+L["FRAME_GROUP_CREATE_TITLE"] = "Name der Raidgruppe";
 
 L["FRAME_CREATE_TITLE"] = "Raid bearbeiten/erstellen";
 L["FRAME_CREATE_TITLE_NEW"] = "Neuen Raid erstellen";

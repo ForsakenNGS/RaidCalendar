@@ -60,12 +60,20 @@ function AceCommPeer:RegisterSyncChannel(channel)
 	end
 end
 
-function AceCommPeer:AddSyncPacket(type, data, timestamp, expires, source, packetId, sender, suppressUpdate)
-	local charName = UnitName("player");
+function AceCommPeer:AddSyncPacket(groupId, type, data, timestamp, expires, source, packetId, sender, suppressUpdate)
+  if (self.syncDb.factionrealm.groups[groupId] == nil) then
+    -- Group unknown, request from sender
+    self:SyncRequestGroup(groupId, "WHISPER", sender);
+    return;
+  end
+  local group = self.syncDb.factionrealm.groups[groupId];
+
 	if (not source) then
-		source = charName;
+    -- Source not supplied, player character by default
+		source = self.charName;
 		verified = true;
 	else
+    -- Ensure not accepting packets for own characters
 	  for charName, charDetails in pairs(self.syncDb.factionrealm.characters) do
 	    if (source == charName) then
 	      -- Do not allow receiving own packets from remote sources
@@ -75,41 +83,123 @@ function AceCommPeer:AddSyncPacket(type, data, timestamp, expires, source, packe
 	end
 	if (not packetId) then
 		-- Generate local packet id
-		packetId = charName..self.syncDb.char.messageId;
+		packetId = self.charName..self.syncDb.char.messageId;
 		self.syncDb.char.messageId = self.syncDb.char.messageId + 1;
 	end
 	if (not timestamp) then
+    -- Set current timestamp
 		timestamp = self:GetSyncTime();
 	end
 	if (not expires) then
-		expires = timestamp + 86400 * 7; -- 1 week by default
+    -- Expire date not supplied, 1 week by default
+		expires = timestamp + 86400 * 7;
 	end
 	if (not sender) then
-		sender = charName;
+    -- Sender not supplied, player character by default
+		sender = self.charName;
 	end
 	local verified = false;
 	if (source == sender) then
+    -- Automatically set verified if the source is also the sender
 		verified = true;
 	end
 	-- Store in db
 	local packet = {
 		id = packetId, type = type, timestamp = timestamp, expires = expires,
-		data = data, source = source, sender = sender, verified = verified,
+		data = data, group = groupId, source = source, sender = sender, verified = verified,
 		extra = {}
 	};
+	self.syncDb.factionrealm.groups[groupId].packets[packetId] = packet;
 	-- Debug
-	self.syncDb.factionrealm.packets[packetId] = packet;
 	self:Print("Added packet: "..packetId);
 	-- Broadcast if own
 	if (sender == charName) then
-		self:SyncBroadcastPackets({ packetId });
+		self:SyncBroadcastPackets(groupId, { packetId });
 	end
   -- Send update event
   if (not suppressUpdate) then
-    self:OnSyncPacketsChanged();
+    self:OnSyncPacketsChanged(groupId);
   end
 	-- Return packet id
 	return packetId;
+end
+
+function AceCommPeer:CreateSyncGroup(title, guild, peers, owner, id, confirmed, enabled, operators)
+  -- Owner
+  if (owner == nil) then
+    -- Create group for the player if not supplied
+    owner = self.charName;
+    confirmed = true;
+  end
+  -- Ident
+  if (id == nil) then
+    -- Automatically generate a new group id
+    local idBase = owner..date("%y%d%m");
+    local idCounter = 1;
+    id = idBase.."-"..idCounter;
+    while (self.syncDb.factionrealm.groups[id] ~= nil) do
+      idCounter = idCounter + 1;
+      id = idBase.."-"..idCounter;
+    end
+  end
+  -- Title
+  if (title == nil) then
+    title = id;
+  end
+  -- Peers
+  if (peers == nil) then
+    peers = {};
+    tinsert(peers, owner);
+  end
+  -- Enabled
+  if (enabled == nil) then
+    enabled = true;
+  end
+  -- Operators
+  if (operators == nil) then
+    operators = {};
+    tinsert(operators, owner);
+  end
+  -- Do not overwrite existing groups
+  if (self.syncDb.factionrealm.groups[id] ~= nil) then
+    -- Update if from owner
+    local group = self.syncDb.factionrealm.groups[id];
+    if confirmed and (group.owner == owner) then
+      group.confirmed = confirmed;
+      group.title = title;
+      group.guild = guild;
+      group.peers = peers;
+      group.operators = operators;
+    end
+    return;
+  end
+	-- Store in db
+  local group = {
+    id = id, title = title, owner = owner, guild = guild, enabled = enabled,
+    confirmed = confirmed, updated = self:GetSyncTime(),
+    packets = {}, peers = peers, operators = operators
+  };
+  self.syncDb.factionrealm.groups[id] = group;
+end
+
+function AceCommPeer:DeleteSyncGroup(groupId)
+  if (self.syncDb.factionrealm.groups[groupId] == nil) then
+    return false;
+  end
+  self.syncDb.factionrealm.groups[groupId] = nil;
+  return;
+end
+
+function AceCommPeer:GetSyncGroupTitles()
+  local groupTitles = {};
+  for groupId, group in pairs(self.syncDb.factionrealm.groups) do
+    groupTitles[groupId] = group.title;
+  end
+  return groupTitles;
+end
+
+function AceCommPeer:GetSyncGroupList()
+  return self.syncDb.factionrealm.groups;
 end
 
 function AceCommPeer:GetSyncDbDefaults()
@@ -121,7 +211,8 @@ function AceCommPeer:GetSyncDbDefaults()
 			characters = {},
 			packets = {},
 			config = {},
-			peers = {}
+			peers = {},
+      groups = {}
     }
   };
 end
@@ -130,16 +221,41 @@ function AceCommPeer:GetSyncTime()
   return self.syncTimeStart + GetTime();
 end
 
-function AceCommPeer:GetSyncPacketsSorted()
+function AceCommPeer:GetSyncPacketsSorted(groupId)
+  local packetsSorted = {};
+  if (groupId == nil) then
+    -- List all known packets regardless of group
+  	for groupId, group in pairs(self.syncDb.factionrealm.groups) do
+    	for id, packet in pairs(self.syncDb.factionrealm.groups[groupId].packets) do
+    		tinsert(packetsSorted, packet);
+    	end
+    end
+  else
+    -- List all known packets for a specific group
+    if (self.syncDb.factionrealm.groups[groupId] ~= nil) then
+    	for id, packet in pairs(self.syncDb.factionrealm.groups[groupId].packets) do
+    		tinsert(packetsSorted, packet);
+    	end
+    end
+  end
 	-- Sort packets by timestamp
-	local packetsSorted = {};
-	for id, packet in pairs(self.syncDb.factionrealm.packets) do
-		tinsert(packetsSorted, packet);
-	end
   sort(packetsSorted, function(a, b)
     return a.timestamp < b.timestamp;
   end);
 	return packetsSorted;
+end
+
+function AceCommPeer:SetSyncGroupEnabled(groupId, enabled)
+  if (self.syncDb.factionrealm.groups[groupId] ~= nil) then
+    self:Debug(enabled);
+    local group = self.syncDb.factionrealm.groups[groupId];
+    if (group.enabled ~= enabled) then
+      group.enabled = enabled;
+      if (enabled) then
+        self:SyncGroup(groupId);
+      end
+    end
+  end
 end
 
 function AceCommPeer:SyncDebug(message)
@@ -186,15 +302,80 @@ function AceCommPeer:SyncPeers()
 	end
 end
 
-function AceCommPeer:SyncPeer(distribution, target)
-  local timeNow = self:GetSyncTime();
-  local messageData = { type = "SyncReport", known = {} };
-  for id, packet in pairs(self.syncDb.factionrealm.packets) do
+function AceCommPeer:SyncGroup(groupId)
+  local group = self.syncDb.factionrealm.groups[groupId];
+  if (group == nil) then
+    return false;
+  end
+  -- Prepare message data
+  local messageData = { type = "SyncReport", group = groupId, known = {} };
+  for id, packet in pairs(group.packets) do
     if (packet.expires > timeNow) then
       tinsert(messageData.known, id);
     end
   end
-  self:SyncSend(messageData, distribution, target);
+  if (group.guild ~= nil) and (group.guild == self.charDetails.guild) then
+    -- Report to guild
+    self:SyncSend(messageData, "GUILD");
+  end
+  -- Whisper peers (friends?)
+  for charName, syncPeer in pairs(group.peers) do
+    if (not syncPeer.guild) then
+      if (syncPeer.online) then
+        self:SyncSend(messageData, "WHISPER", charName);
+      else
+        -- TODO Recheck online status if last update was time X ago?
+      end
+    end
+  end
+  return true;
+end
+
+function AceCommPeer:SyncPeer(distribution, target)
+  local timeNow = self:GetSyncTime();
+  for groupId, group in pairs(self.syncDb.factionrealm.groups) do
+    if (self:SyncPeerCheck(group, distribution, target)) then
+      local messageData = { type = "SyncReport", group = groupId, known = {} };
+      for id, packet in pairs(group.packets) do
+        if (packet.expires > timeNow) then
+          tinsert(messageData.known, id);
+        end
+      end
+      self:SyncSend(messageData, distribution, target);
+    end
+  end
+end
+
+-- Check if a sync report for the given group should be sent on the given channel
+function AceCommPeer:SyncPeerCheck(group, distribution, target)
+  if (distribution == "WHISPER") then
+    -- Should send sync report to the given peer?
+    if tContains(target, group.peers) then
+      -- Peer explicitly added
+      return true;
+    end
+    local peer = self.syncDb.factionrealm.peers[target];
+    if (peer == nil) then
+      -- Peer not known
+      return false;
+    end
+    if not IsInGuild() then
+      return false;
+    end
+    if (group.guild ~= nil) and (peer.guild ~= nil) then
+      -- Peer is in the groups guild
+      return (peer.guild == group.guild);
+    end
+    -- Not qualified!
+    return false;
+  elseif (distribution == "GUILD") then
+    -- Should send sync report to guild?
+    if not IsInGuild() or (group.guild == nil) then
+      -- Not in a guild or no guild group
+      return false;
+    end
+    return (group.guild == self.charDetails.guild);
+  end
 end
 
 function AceCommPeer:SyncSend(messageData, distribution, target)
@@ -208,19 +389,25 @@ function AceCommPeer:SyncSend(messageData, distribution, target)
 	self:SyncDebug(messageData.type.." @ "..distribution.." / "..target..": "..serializeTable(messageData, "data", true));
 end
 
-function AceCommPeer:SyncRequestPackets(ids, distribution, target)
-  local messageData = { type = "SyncRequest", packetIds = ids };
+function AceCommPeer:SyncRequestPackets(groupId, ids, distribution, target)
+  local messageData = { type = "SyncRequest", group = groupId, packetIds = ids };
   self:SyncSend(messageData, distribution, target);
 end
 
-function AceCommPeer:SyncBroadcastPackets(ids)
+function AceCommPeer:SyncRequestGroup(groupId, distribution, target)
+  local messageData = { type = "SyncRequest", group = groupId };
+  self:SyncSend(messageData, distribution, target);
+end
+
+function AceCommPeer:SyncBroadcastPackets(groupId, ids)
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
+      local group = self.syncDb.factionrealm.groups[groupId];
 			-- Whisper peers (friends?)
-			for charName, syncPeer in pairs(self.syncDb.factionrealm.peers) do
+			for index, charName in ipairs(group.peers) do
 				if (not syncPeer.guild) then
           if (syncPeer.online) then
-            self:SyncSendPackets(ids, "WHISPER", charName);
+            self:SyncSendPackets(groupId, ids, "WHISPER", charName);
           else
             -- TODO Recheck online status if last update was time X ago?
           end
@@ -228,34 +415,68 @@ function AceCommPeer:SyncBroadcastPackets(ids)
 			end
 		else
 			-- Group peers (guild, raid, etc.)
-			self:SyncSendPackets(ids, "GUILD");
+			self:SyncSendPackets(groupId, ids, "GUILD");
 		end
 	end
 end
 
-function AceCommPeer:SyncSendPackets(ids, distribution, target)
-  local messageData = { type = "SyncData", packets = {} };
+function AceCommPeer:SyncSendPackets(groupId, ids, distribution, target)
+  local group = self.syncDb.factionrealm.groups[groupId];
+  if (group == nil) then
+    -- Group not known!
+    return;
+  end
+  if not self:SyncPeerCheck(group, distribution, target) then
+    -- Target not qualified to receive packets from this group
+    return;
+  end
+  -- Send packets to peer
+  local messageData = { type = "SyncData", group = groupId, packets = {} };
   for index, id in ipairs(ids) do
-    messageData.packets[id] = self.syncDb.factionrealm.packets[id];
+    messageData.packets[id] = group.packets[id];
   end
   self:SyncSend(messageData, distribution, target);
 end
 
-function AceCommPeer:SyncConfirm(id, packet)
-  local messageData = { type = "SyncConfirm", id = id, data = packet.data };
+function AceCommPeer:SyncSendGroup(groupId, distribution, target)
+  local group = self.syncDb.factionrealm.groups[groupId];
+  if (group == nil) then
+    -- Group not known!
+    return;
+  end
+  if not self:SyncPeerCheck(group, distribution, target) then
+    -- Target not qualified to receive packets from this group
+    return;
+  end
+  -- Send group data to peer
+  local messageData = { type = "SyncData", group = groupId, groupData = {
+    title = group.title, guild = group.guild, peers = group.peers,
+    owner = group.owner, operators = group.operators
+  } };
+  self:SyncSend(messageData, distribution, target);
+end
+
+function AceCommPeer:SyncConfirm(groupId, id, packet)
+  local messageData = { type = "SyncConfirm", group = groupId, id = id, data = packet.data };
   self:SyncSend(messageData, "WHISPER", packet.source);
 end
 
-function AceCommPeer:SyncUpdateVerification(id)
-  local packet = self.db.factionrealm.packets[id];
+function AceCommPeer:SyncUpdateVerification(groupId, id)
+  local group = self.syncDb.factionrealm.groups[groupId];
+  if (group == nil) then
+    -- Group not known!
+    return;
+  end
+  local packet = group.packets[id];
   if (not packet) then
+    -- Packet not known!
     return;
   end
   if (packet.verified) then
     return;
   end
   if (self:SyncPeerAvailable(packet.source)) then
-    self:SyncConfirm(id, packet);
+    self:SyncConfirm(groupId, id, packet);
   end
 end
 
@@ -298,61 +519,91 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
   	self:SyncDebug(messageData.type.." @ "..distribution.." / "..sender..": "..serializeTable(messageData, "data", true));
     self:SyncPeerAdd(sender, distribution);
     if (messageData.type == "SyncReport") then
-      local timeNow = self:GetSyncTime();
-      local packetsKnownLocal = {};
-      local packetsMissingLocal = {};
-      local packetsMissingRemote = {};
-      for id, packet in pairs(self.syncDb.factionrealm.packets) do
-        if (packet.expires > timeNow) then
-          tinsert(packetsKnownLocal, id);
-          if not tContains(messageData.known, id) then
-            tinsert(packetsMissingRemote, id);
-            if (#(packetsMissingRemote) >= this.syncMaxPacketsPerRequest) then
-              -- Limit max packet per reply to a reasonable number
-              break;
+      local groupId = messageData.group;
+      local group = self.syncDb.factionrealm.groups[groupId];
+      if (group ~= nil) then
+        local timeNow = self:GetSyncTime();
+        local packetsKnownLocal = {};
+        local packetsMissingLocal = {};
+        local packetsMissingRemote = {};
+        for id, packet in pairs(group.packets) do
+          if (packet.expires > timeNow) then
+            tinsert(packetsKnownLocal, id);
+            if not tContains(messageData.known, id) then
+              tinsert(packetsMissingRemote, id);
+              if (#(packetsMissingRemote) >= this.syncMaxPacketsPerRequest) then
+                -- Limit max packet per reply to a reasonable number
+                break;
+              end
             end
           end
         end
-      end
-      for index, id in ipairs(messageData.known) do
-        if not tContains(packetsKnownLocal, id) then
-          tinsert(packetsMissingLocal, id);
+        for index, id in ipairs(messageData.known) do
+          if not tContains(packetsKnownLocal, id) then
+            tinsert(packetsMissingLocal, id);
+          end
         end
-      end
-      if #(packetsMissingLocal) > 0 then
-        self:Debug("Sending "..#(packetsMissingLocal).." Sync-Packets to "..sender);
-        -- Request missing actions from peer
-        self:SyncRequestPackets(packetsMissingLocal, "WHISPER", sender);
-      end
-      if #(packetsMissingRemote) > 0 then
-        self:Debug("Requesting "..#(packetsMissingLocal).." Sync-Packets from "..sender);
-        -- Send missing actions to peer
-        self:SyncSendPackets(packetsMissingRemote, "WHISPER", sender);
+        if #(packetsMissingLocal) > 0 then
+          self:SyncDebug("Sending "..#(packetsMissingLocal).." Sync-Packets to "..sender.." (Group: "..groupId..")");
+          -- Request missing actions from peer
+          self:SyncRequestPackets(groupId, packetsMissingLocal, "WHISPER", sender);
+        end
+        if #(packetsMissingRemote) > 0 then
+          self:SyncDebug("Requesting "..#(packetsMissingLocal).." Sync-Packets from "..sender.." (Group: "..groupId..")");
+          -- Send missing actions to peer
+          self:SyncSendPackets(groupId, packetsMissingRemote, "WHISPER", sender);
+        end
       end
     elseif (messageData.type == "SyncRequest") then
-      self:SyncSendPackets(messageData.packetIds, sender);
+      if (messageData.packetIds ~= nil) then
+        self:SyncSendPackets(messageData.group, messageData.packetIds, sender);
+      else
+        self:SyncSendGroup(messageData.group, "WHISPER", sender);
+      end
     elseif (messageData.type == "SyncData") then
-			local newPackets = false;
-      for id, packet in pairs(messageData.packets) do
-        if (self.syncDb.factionrealm.packets[id] == nil) then
-          self:AddSyncPacket(packet.type, packet.data, packet.timestamp, packet.expires, packet.source, id, sender, true);
-					newPackets = true;
+      local group = self.syncDb.factionrealm.groups[messageData.group];
+      if (group ~= nil) then
+        if (messageData.packets ~= nil) then
+    			local newPackets = false;
+          for id, packet in pairs(messageData.packets) do
+            if (group.packets[id] == nil) then
+              self:AddSyncPacket(messageData.group, packet.type, packet.data, packet.timestamp, packet.expires, packet.source, id, sender, true);
+    					newPackets = true;
+            end
+          end
+    			if (newPackets) then
+    				self:OnSyncPacketsChanged(messageData.group);
+    			end
+        end
+        if (messageData.groupData ~= nil) then
+          if (messageData.groupData.owner == self.charName) then
+            -- Do not allow faking groups
+          end
+          local groupConfirmed = (sender == messageData.groupData.owner);
+          self:CreateSyncGroup(
+            messageData.groupData.title, messageData.groupData.guild,
+            messageData.groupData.peers, messageData.groupData.owner,
+            messageData.group, groupConfirmed, false, messageData.groupData.operators
+          );
         end
       end
-			if (newPackets) then
-				self:OnSyncPacketsChanged();
-			end
     elseif (messageData.type == "SyncConfirm") then
-		  local packet = self.db.factionrealm.packets[messageData.id];
-		  if (self:Serialize(packet.data) == self:Serialize(messageData.data)) then
-		    local messageData = { type = "SyncAck", id = messageData.id };
-		    self:SyncSend(messageData, "WHISPER", sender);
-		  end
+      local group = self.syncDb.factionrealm.groups[messageData.group];
+      if (group ~= nil) then
+  		  local packet = group.packets[messageData.id];
+  		  if (self:Serialize(packet.data) == self:Serialize(messageData.data)) then
+  		    local messageData = { type = "SyncAck", group = messageData.group, id = messageData.id };
+  		    self:SyncSend(messageData, "WHISPER", sender);
+  		  end
+      end
     elseif (messageData.type == "SyncAck") then
-      local packet = self.syncDb.factionrealm.packets[messageData.id];
-			if (packet and packet.source == sender) then
-				packet.verified = true;
-			end
+      local group = self.syncDb.factionrealm.groups[messageData.group];
+      if (group ~= nil) then
+  		  local packet = group.packets[messageData.id];
+  			if (packet and packet.source == sender) then
+  				packet.verified = true;
+  			end
+      end
     elseif (messageData.type == "SyncPing") then
       self:SyncSend({ type = "SyncPong", time = self:GetSyncTime() }, "WHISPER", sender);
     elseif (messageData.type == "SyncPong") then
@@ -370,19 +621,24 @@ end
 --------------------------------------------------------------------------------
 function AceCommPeer:OnEventCommPeer(eventName, ...)
   if (eventName == "PLAYER_ENTERING_WORLD") then
+    self.charName = UnitName("player");
     -- Cleanup expired packages
     self:SyncCleanup();
     -- Update local character list
-    local charName = UnitName("player");
-    if (self.syncDb.factionrealm.characters[charName] == nil) then
-      self.syncDb.factionrealm.characters[charName] = {
+    if (self.syncDb.factionrealm.characters[self.charName] == nil) then
+      self.charDetails = {
         name = charName, level = 0, class = ""
       };
+      self.syncDb.factionrealm.characters[self.charName] = self.charDetails;
+    else
+      self.charDetails = self.syncDb.factionrealm.characters[self.charName];
     end
     local charLevel = UnitLevel("player");
     local className, classFilename, classID = UnitClass("player");
-    self.syncDb.factionrealm.characters[charName].level = charLevel;
-    self.syncDb.factionrealm.characters[charName].class = classFilename;
+    local guildName, guildRankName, guildRankIndex, realm = GetGuildInfo("player");
+    self.charDetails.level = charLevel;
+    self.charDetails.class = classFilename;
+    self.charDetails.guild = guildName;
     -- Update sync peers
 		self:SyncPeers();
   end
@@ -415,20 +671,28 @@ end
 
 local mixins = {
 	"AddSyncPacket",
+  "CreateSyncGroup",
+  "DeleteSyncGroup",
 	"GetSyncDbDefaults",
 	"GetSyncTime",
 	"GetSyncPacketsSorted",
+  "GetSyncGroupTitles",
+  "GetSyncGroupList",
+  "SetSyncGroupEnabled",
 	"SyncDebug",
   "SyncCleanup",
   "SyncClearData",
-	"SyncPeers",
-	"SyncPeer",
 	"SyncSend",
 	"SyncConfirm",
+  "SyncGroup",
+	"SyncPeer",
+	"SyncPeers",
 	"SyncPeerAdd",
 	"SyncPeerAvailable",
+  "SyncPeerCheck",
 	"SyncBroadcastPackets",
 	"SyncSendPackets",
+  "SyncSendGroup",
   "SyncRequestPackets",
 	"OnSyncPacketsChanged",
 	"OnEventCommPeer",

@@ -2,6 +2,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("RaidCalendar", "enUS", true);
 
 L["TITLE"] = "Raid Calendar";
+L["ICON_TOOLTIP"] = "Raid Calendar\nLeft-Click: Calendar\nRight-Click: Groups";
 
 L["DATE_FORMAT"] = "%m.%d.%Y %H:%M:%S";
 
@@ -11,6 +12,8 @@ L["OPTION_START_ON_MONDAY_NAME"] = "Start calendar on monday";
 L["OPTION_START_ON_MONDAY_DESC"] = "Start calendar with monday as the first day (instead of sunday)";
 L["OPTION_SHOW_CALENDAR"] = "Open Calendar";
 L["OPTION_SHOW_CALENDAR_DESC"] = "Open the calendar window";
+L["OPTION_SHOW_GROUPS"] = "Show raid groups";
+L["OPTION_SHOW_GROUPS_DESC"] = "Open raid group overview";
 L["OPTION_RESET_DATA"] = "Reset data";
 L["OPTION_RESET_DATA_DESC"] = "Reset all local sync data";
 L["OPTION_ADD_CHARACTER"] = "Add character";
@@ -62,6 +65,16 @@ L["FRAME_GENERIC_DESCRIPTION"] = "Description";
 L["FRAME_GENERIC_SAVE"] = "Save";
 L["FRAME_GENERIC_DELETE"] = "Delete";
 L["FRAME_GENERIC_CREATED_BY"] = "Created by";
+
+L["FRAME_GROUPS_TITLE"] = "Raid groups";
+L["FRAME_GROUPS_PEERS"] = "Peers";
+L["FRAME_GROUPS_DELETE"] = "Delete";
+
+L["FRAME_GROUP_CREATE_HEADER"] = "Create raid group";
+L["FRAME_GROUP_CREATE_TYPE"] = "Group type";
+L["FRAME_GROUP_CREATE_TYPE_PERSONAL"] = "Personal";
+L["FRAME_GROUP_CREATE_TYPE_GUILD"] = "Guild group";
+L["FRAME_GROUP_CREATE_TITLE"] = "Raid group name";
 
 L["FRAME_CREATE_TITLE"] = "Create/Edit Raid";
 L["FRAME_CREATE_TITLE_NEW"] = "Create new Raid";
