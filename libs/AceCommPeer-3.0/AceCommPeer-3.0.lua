@@ -186,7 +186,8 @@ function AceCommPeer:DeleteSyncGroup(groupId)
     return false;
   end
   self.syncDb.factionrealm.groups[groupId] = nil;
-  return;
+  self:OnSyncPacketsChanged();
+  return true;
 end
 
 function AceCommPeer:GetSyncGroupTitles()
@@ -254,6 +255,9 @@ function AceCommPeer:SetSyncGroupEnabled(groupId, enabled)
       group.enabled = enabled;
       if (enabled) then
         self:SyncGroup(groupId);
+        self:OnSyncPacketsChanged(groupId);
+      else
+        self:OnSyncPacketsChanged();
       end
     end
   end
