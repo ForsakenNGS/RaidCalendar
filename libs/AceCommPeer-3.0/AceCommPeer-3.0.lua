@@ -307,6 +307,7 @@ function AceCommPeer:SyncGroup(groupId)
     return false;
   end
   -- Prepare message data
+  local timeNow = self:GetSyncTime();
   local messageData = { type = "SyncReport", group = groupId, known = {} };
   for id, packet in pairs(group.packets) do
     if (packet.expires > timeNow) then
