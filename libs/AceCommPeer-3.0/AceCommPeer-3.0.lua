@@ -445,7 +445,7 @@ function AceCommPeer:SyncSendGroup(groupId, distribution, target)
   end
   if not self:SyncPeerCheck(group, distribution, target) then
     -- Target not qualified to receive packets from this group
-    self:Debug("Not qualified to receive information about group '".groupId."': "..distribution.." / "..target);
+    self:Debug("Not qualified to receive information about group '"..groupId.."': "..distribution.." / "..target);
     return;
   end
   -- Send group data to peer
