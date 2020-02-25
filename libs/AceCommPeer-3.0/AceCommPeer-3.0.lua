@@ -286,7 +286,7 @@ function AceCommPeer:SyncPeers()
 		if (channel == "WHISPER") then
 			-- Whisper peers (friends?)
 			for charName, syncPeer in pairs(self.syncDb.factionrealm.peers) do
-				if (not syncPeer.guild) then
+				if (syncPeer.guild == nil) or (syncPeer.guild ~= self.charDetails.guild) then
           if (syncPeer.online) then
   					self:SyncPeer("WHISPER", charName);
           else
@@ -319,7 +319,7 @@ function AceCommPeer:SyncGroup(groupId)
   end
   -- Whisper peers (friends?)
   for charName, syncPeer in pairs(group.peers) do
-    if (not syncPeer.guild) then
+    if (syncPeer.guild == nil) or (syncPeer.guild ~= self.charDetails.guild) then
       if (syncPeer.online) then
         self:SyncSend(messageData, "WHISPER", charName);
       else
@@ -401,10 +401,9 @@ end
 function AceCommPeer:SyncBroadcastPackets(groupId, ids)
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
-      local group = self.syncDb.factionrealm.groups[groupId];
 			-- Whisper peers (friends?)
 			for index, charName in ipairs(group.peers) do
-				if (not syncPeer.guild) then
+				if (syncPeer.guild == nil) or (syncPeer.guild ~= self.charDetails.guild) then
           if (syncPeer.online) then
             self:SyncSendPackets(groupId, ids, "WHISPER", charName);
           else
@@ -558,6 +557,13 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
         self:SyncRequestGroup(groupId, "WHISPER", sender);
       end
     elseif (messageData.type == "SyncRequest") then
+      local group = self.syncDb.factionrealm.groups[messageData.group];
+      if (group ~= nil) and (group.owner == self.charName) then
+        if not tContains(group.peers, sender) and self:SyncPeerCheck(group, "WHISPER", sender) then
+          tinsert(group.peers, sender);
+          -- TODO: Update event?
+        end
+      end
       if (messageData.packetIds ~= nil) then
         self:SyncSendPackets(messageData.group, messageData.packetIds, sender);
       else
@@ -565,30 +571,28 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       end
     elseif (messageData.type == "SyncData") then
       local group = self.syncDb.factionrealm.groups[messageData.group];
-      if (group ~= nil) then
-        if (messageData.packets ~= nil) then
-    			local newPackets = false;
-          for id, packet in pairs(messageData.packets) do
-            if (group.packets[id] == nil) then
-              self:AddSyncPacket(messageData.group, packet.type, packet.data, packet.timestamp, packet.expires, packet.source, id, sender, true);
-    					newPackets = true;
-            end
+      if (group ~= nil) and (messageData.packets ~= nil) then
+  			local newPackets = false;
+        for id, packet in pairs(messageData.packets) do
+          if (group.packets[id] == nil) then
+            self:AddSyncPacket(messageData.group, packet.type, packet.data, packet.timestamp, packet.expires, packet.source, id, sender, true);
+  					newPackets = true;
           end
-    			if (newPackets) then
-    				self:OnSyncPacketsChanged(messageData.group);
-    			end
         end
-        if (messageData.groupData ~= nil) then
-          if (messageData.groupData.owner == self.charName) then
-            -- Do not allow faking groups
-          end
-          local groupConfirmed = (sender == messageData.groupData.owner);
-          self:CreateSyncGroup(
-            messageData.groupData.title, messageData.groupData.guild,
-            messageData.groupData.peers, messageData.groupData.owner,
-            messageData.group, groupConfirmed, false, messageData.groupData.operators
-          );
+  			if (newPackets) then
+  				self:OnSyncPacketsChanged(messageData.group);
+  			end
+      end
+      if (messageData.groupData ~= nil) then
+        if (messageData.groupData.owner == self.charName) then
+          -- Do not allow faking groups
         end
+        local groupConfirmed = (sender == messageData.groupData.owner);
+        self:CreateSyncGroup(
+          messageData.groupData.title, messageData.groupData.guild,
+          messageData.groupData.peers, messageData.groupData.owner,
+          messageData.group, groupConfirmed, false, messageData.groupData.operators
+        );
       end
     elseif (messageData.type == "SyncConfirm") then
       local group = self.syncDb.factionrealm.groups[messageData.group];

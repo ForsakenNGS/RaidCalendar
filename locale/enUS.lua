@@ -48,6 +48,7 @@ L["CLASS_WARRIOR"] = "Warrior";
 
 L["RAID_MC"] = "Moten Core";
 L["RAID_Ony"] = "Onyxia";
+L["RAID_BWL"] = "Blackwing Lair";
 L["RAID_Other"] = "Other";
 
 L["CHAT_REPORT_NOT_SIGNED_UP"] = "You are not signed up for :count raid(s)!";
@@ -59,6 +60,7 @@ L["FRAME_CAL_HINT_RCLICK"] = "Right click: Create new raid";
 L["FRAME_GENERIC_INVITE"] = "Invite";
 L["FRAME_GENERIC_START"] = "Start";
 L["FRAME_GENERIC_END"] = "End";
+L["FRAME_GENERIC_RAID_GROUP"] = "Raid group";
 L["FRAME_GENERIC_INSTANCE"] = "Instance";
 L["FRAME_GENERIC_COMMENT"] = "Comment";
 L["FRAME_GENERIC_DESCRIPTION"] = "Description";

@@ -4,6 +4,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale("RaidCalendar");
 local Raids = {}
 Raids["MC"] = L["RAID_MC"];
 Raids["Ony"] = L["RAID_Ony"];
+Raids["BWL"] = L["RAID_BWL"];
 Raids["Other"] = L["RAID_Other"];
 
 RaidCreateFrame = AceGUI:Create("Frame");
@@ -65,6 +66,10 @@ local labelRaid = AceGUI:Create("Label");
 labelRaid:SetText(L["FRAME_GENERIC_INSTANCE"]);
 labelRaid:SetWidth(140);
 labelRaid:SetFont("Fonts\\FRIZQT__.TTF", 14)
+local labelRaidGroup = AceGUI:Create("Label");
+labelRaidGroup:SetText(L["FRAME_GENERIC_RAID_GROUP"]);
+labelRaidGroup:SetWidth(140);
+labelRaidGroup:SetFont("Fonts\\FRIZQT__.TTF", 14)
 local labelComment = AceGUI:Create("Label");
 labelComment:SetText(L["FRAME_GENERIC_COMMENT"]);
 labelComment:SetWidth(140);
@@ -74,6 +79,7 @@ labelGroupRaid:SetLayout("Flow");
 labelGroupRaid:SetFullWidth(true);
 labelGroupRaid:SetHeight(32);
 labelGroupRaid:AddChild(labelRaid);
+labelGroupRaid:AddChild(labelRaidGroup);
 labelGroupRaid:AddChild(labelComment);
 RaidCreateFrame:AddChild(labelGroupRaid);
 
@@ -83,8 +89,12 @@ editRaid:SetWidth(140);
 editRaid:SetHeight(24);
 editRaid:SetValue("Other");
 editRaid:SetCallback("OnValueChanged", function(widget, event, key) RaidCreateFrame:OnRaidChanged(widget, key) end);
+local editRaidGroup = AceGUI:Create("Dropdown");
+editRaidGroup:SetWidth(140);
+editRaidGroup:SetHeight(24);
+editRaidGroup:SetCallback("OnValueChanged", function(widget, event, key) RaidCreateFrame:OnRaidGroupChanged(widget, key) end);
 local editComment = AceGUI:Create("EditBox");
-editComment:SetWidth(280);
+editComment:SetWidth(140);
 editComment:SetHeight(24);
 editComment:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnCommentChanged(widget, text) end);
 editComment:DisableButton(true);
@@ -93,8 +103,10 @@ editGroupRaid:SetLayout("Flow");
 editGroupRaid:SetFullWidth(true);
 editGroupRaid:SetHeight(32);
 editGroupRaid:AddChild(editRaid);
+editGroupRaid:AddChild(editRaidGroup);
 editGroupRaid:AddChild(editComment);
 RaidCreateFrame.editRaid = editRaid;
+RaidCreateFrame.editRaidGroup = editRaidGroup;
 RaidCreateFrame.editComment = editComment;
 RaidCreateFrame:AddChild(editGroupRaid);
 
@@ -144,6 +156,9 @@ function RaidCreateFrame:SetData(data)
   if (self.raidData.instance == nil) then
     self.raidData.instance = "MC";
   end
+  if (self.raidData.group == nil) then
+    self.raidData.group = "";
+  end
   if (self.raidData.comment == nil) then
     self.raidData.comment = "";
   end
@@ -154,11 +169,14 @@ function RaidCreateFrame:SetData(data)
   self.editStart:SetText(self.raidData.timeStart);
   self.editEnd:SetText(self.raidData.timeEnd);
   self.editRaid:SetValue(self.raidData.instance);
+  self.editRaidGroup:SetValue(self.raidData.group);
   self.editComment:SetText(self.raidData.comment);
   self.editDetails:SetText(self.raidData.details);
 end
 
 function RaidCreateFrame:OpenNew(dateStr)
+  self.editRaidGroup:SetList( RaidCalendar:GetSyncGroupTitles() );
+  self.editRaidGroup:SetDisabled(false);
   self:SetData(RaidCalendar.db.factionrealm.raidDefaults);
   self:SetDateStr(dateStr);
   self:Show();
@@ -166,6 +184,8 @@ end
 
 function RaidCreateFrame:OpenEdit(raidId)
   local raidData = RaidCalendar:GetRaidDetails(raidId)
+  self.editRaidGroup:SetList( RaidCalendar:GetSyncGroupTitles() );
+  self.editRaidGroup:SetDisabled(true);
   self:SetData(raidData);
   self:SetDateStr(raidData.dateStr);
   self:Show();
@@ -205,6 +225,10 @@ function RaidCreateFrame:OnRaidChanged(widget, key)
   self.raidData.instance = key;
 end
 
+function RaidCreateFrame:OnRaidGroupChanged(widget, key)
+  self.raidData.group = key;
+end
+
 function RaidCreateFrame:OnCommentChanged(widget, value)
   self.raidData.comment = value;
 end
@@ -219,7 +243,7 @@ function RaidCreateFrame:OnSave(widget)
   if (self.raidData.id == nil) then
     -- Create raid
     self.raidData.id = RaidCalendar:AddRaid(
-      self.raidData.dateStr, self.raidData.expires, UnitName("player"),
+      self.raidData.group, self.raidData.dateStr, self.raidData.expires, UnitName("player"),
       self.raidData.timeInvite, self.raidData.timeStart, self.raidData.timeEnd,
       self.raidData.instance, self.raidData.comment, self.raidData.details
     );

@@ -51,6 +51,7 @@ L["CLASS_WARRIOR"] = "Krieger";
 
 L["RAID_MC"] = "Geschmolzener Kern";
 L["RAID_Ony"] = "Onyxia";
+L["RAID_BWL"] = "Pechschwingenhort";
 L["RAID_Other"] = "Other";
 
 L["CHAT_REPORT_NOT_SIGNED_UP"] = "Du bist für :count raid(s) noch nicht angemeldet!";
@@ -62,6 +63,7 @@ L["FRAME_CAL_HINT_RCLICK"] = "Right click: Neuen Raid erstellen";
 L["FRAME_GENERIC_INVITE"] = "Invite";
 L["FRAME_GENERIC_START"] = "Anfang";
 L["FRAME_GENERIC_END"] = "Ende";
+L["FRAME_GENERIC_RAID_GROUP"] = "Raid-Gruppe";
 L["FRAME_GENERIC_INSTANCE"] = "Instanz";
 L["FRAME_GENERIC_COMMENT"] = "Kommentar";
 L["FRAME_GENERIC_DESCRIPTION"] = "Beschreibung";
