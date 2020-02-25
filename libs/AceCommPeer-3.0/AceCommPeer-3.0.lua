@@ -349,7 +349,7 @@ end
 function AceCommPeer:SyncPeerCheck(group, distribution, target)
   if (distribution == "WHISPER") then
     -- Should send sync report to the given peer?
-    if tContains(target, group.peers) then
+    if tContains(group.peers, target) then
       -- Peer explicitly added
       return true;
     end
@@ -489,7 +489,7 @@ function AceCommPeer:SyncPeerAdd(charName, distribution)
 		self.syncDb.factionrealm.peers[charName].updated = self:GetSyncTime();
 	end
 	if (distribution == "GUILD") then
-		self.syncDb.factionrealm.peers[charName].guild = true;
+		self.syncDb.factionrealm.peers[charName].guild = GetGuildInfo("player");
 	end
 end
 
