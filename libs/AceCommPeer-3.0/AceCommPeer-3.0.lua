@@ -531,7 +531,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
             tinsert(packetsKnownLocal, id);
             if not tContains(messageData.known, id) then
               tinsert(packetsMissingRemote, id);
-              if (#(packetsMissingRemote) >= this.syncMaxPacketsPerRequest) then
+              if (#(packetsMissingRemote) >= self.syncMaxPacketsPerRequest) then
                 -- Limit max packet per reply to a reasonable number
                 break;
               end
