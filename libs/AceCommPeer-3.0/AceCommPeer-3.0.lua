@@ -62,8 +62,7 @@ end
 
 function AceCommPeer:AddSyncPacket(groupId, type, data, timestamp, expires, source, packetId, sender, suppressUpdate)
   if (self.syncDb.factionrealm.groups[groupId] == nil) then
-    -- Group unknown, request from sender
-    self:SyncRequestGroup(groupId, "WHISPER", sender);
+    -- Group unknown
     return;
   end
   local group = self.syncDb.factionrealm.groups[groupId];
@@ -247,9 +246,9 @@ end
 
 function AceCommPeer:SetSyncGroupEnabled(groupId, enabled)
   if (self.syncDb.factionrealm.groups[groupId] ~= nil) then
-    self:Debug(enabled);
     local group = self.syncDb.factionrealm.groups[groupId];
     if (group.enabled ~= enabled) then
+      self:Debug(enabled);
       group.enabled = enabled;
       if (enabled) then
         self:SyncGroup(groupId);
@@ -446,6 +445,7 @@ function AceCommPeer:SyncSendGroup(groupId, distribution, target)
   end
   if not self:SyncPeerCheck(group, distribution, target) then
     -- Target not qualified to receive packets from this group
+    self:Debug("Not qualified to receive information about group '".groupId."': "..distribution.." / "..target);
     return;
   end
   -- Send group data to peer
@@ -553,6 +553,9 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
           -- Send missing actions to peer
           self:SyncSendPackets(groupId, packetsMissingRemote, "WHISPER", sender);
         end
+      else
+        -- Group unknown, request from sender
+        self:SyncRequestGroup(groupId, "WHISPER", sender);
       end
     elseif (messageData.type == "SyncRequest") then
       if (messageData.packetIds ~= nil) then
@@ -694,6 +697,7 @@ local mixins = {
 	"SyncSendPackets",
   "SyncSendGroup",
   "SyncRequestPackets",
+  "SyncRequestGroup",
 	"OnSyncPacketsChanged",
 	"OnEventCommPeer",
 	"OnCommReceivedPeer",
