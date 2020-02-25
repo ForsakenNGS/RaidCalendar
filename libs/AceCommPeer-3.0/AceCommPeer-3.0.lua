@@ -664,7 +664,7 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
   end
   if (eventName == "PLAYER_ENTERING_WORLD") or (eventName == "GUILD_ROSTER_UPDATE") then
 		-- Update guild members online
-    local guildName = GetGuildInfo();
+    local guildName = GetGuildInfo("player");
 		for guildIndex = 1, GetNumGuildMembers() do
 			local name, rankName, rankIndex, level, classDisplayName,
 				zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
