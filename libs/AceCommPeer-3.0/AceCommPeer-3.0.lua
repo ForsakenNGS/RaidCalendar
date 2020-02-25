@@ -522,6 +522,11 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       local groupId = messageData.group;
       local group = self.syncDb.factionrealm.groups[groupId];
       if (group ~= nil) then
+        if (group.owner == sender) and not group.confirmed then
+          -- Group not confirmed, request from owner
+          self:SyncRequestGroup(groupId, "WHISPER", sender);
+        end
+        -- Sync packets
         local timeNow = self:GetSyncTime();
         local packetsKnownLocal = {};
         local packetsMissingLocal = {};
@@ -560,15 +565,22 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
     elseif (messageData.type == "SyncRequest") then
       local group = self.syncDb.factionrealm.groups[messageData.group];
       if (group ~= nil) and (group.owner == self.charName) then
-        if not tContains(group.peers, sender) and self:SyncPeerCheck(group, "WHISPER", sender) then
-          tinsert(group.peers, sender);
-          -- TODO: Update event?
-        end
+          if not tContains(group.peers, sender) and self:SyncPeerCheck(group, "WHISPER", sender) then
+            tinsert(group.peers, sender);
+            -- TODO: Update event?
+          end
       end
       if (messageData.packetIds ~= nil) then
+        -- Send requested messages
         self:SyncSendPackets(messageData.group, messageData.packetIds, sender);
       else
-        self:SyncSendGroup(messageData.group, "WHISPER", sender);
+        if (group ~= nil) and (group.owner == sender) then
+          -- Group is not known to owner, delete it!
+          self:DeleteSyncGroup(messageData.group);
+        else
+          -- Group is not known to player, send the group details!
+          self:SyncSendGroup(messageData.group, "WHISPER", sender);
+        end
       end
     elseif (messageData.type == "SyncData") then
       local group = self.syncDb.factionrealm.groups[messageData.group];
@@ -652,12 +664,13 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
   end
   if (eventName == "PLAYER_ENTERING_WORLD") or (eventName == "GUILD_ROSTER_UPDATE") then
 		-- Update guild members online
+    local guildName = GetGuildInfo();
 		for guildIndex = 1, GetNumGuildMembers() do
 			local name, rankName, rankIndex, level, classDisplayName,
 				zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
 			if (self.syncDb.factionrealm.peers[charName]) then
 				self.syncDb.factionrealm.peers[charName].online = isOnline;
-				self.syncDb.factionrealm.peers[charName].guild = true;
+				self.syncDb.factionrealm.peers[charName].guild = guildName;
 			end
 		end
   end
