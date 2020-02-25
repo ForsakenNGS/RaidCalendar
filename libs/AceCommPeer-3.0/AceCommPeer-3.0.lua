@@ -225,9 +225,11 @@ function AceCommPeer:GetSyncPacketsSorted(groupId)
   if (groupId == nil) then
     -- List all known packets regardless of group
   	for groupId, group in pairs(self.syncDb.factionrealm.groups) do
-    	for id, packet in pairs(self.syncDb.factionrealm.groups[groupId].packets) do
-    		tinsert(packetsSorted, packet);
-    	end
+      if (group.enabled) then
+      	for id, packet in pairs(group.packets) do
+      		tinsert(packetsSorted, packet);
+      	end
+      end
     end
   else
     -- List all known packets for a specific group
