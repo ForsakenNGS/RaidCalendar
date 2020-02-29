@@ -172,6 +172,7 @@ function RaidCreateFrame:SetData(data)
   self.editRaidGroup:SetValue(self.raidData.group);
   self.editComment:SetText(self.raidData.comment);
   self.editDetails:SetText(self.raidData.details);
+  self:Validate();
 end
 
 function RaidCreateFrame:OpenNew(dateStr)
@@ -227,6 +228,7 @@ end
 
 function RaidCreateFrame:OnRaidGroupChanged(widget, key)
   self.raidData.group = key;
+  self:Validate();
 end
 
 function RaidCreateFrame:OnCommentChanged(widget, value)
@@ -263,4 +265,13 @@ function RaidCreateFrame:OnDelete(widget)
   RaidCalendar:DeleteRaid(self.raidData.id);
   RaidCalendarFrame:UpdateMonth();
   self:Hide();
+end
+
+function RaidCreateFrame:Validate()
+  -- Validate
+  if (self.raidData.group == "") then
+    self.btnSave:SetDisabled(true);
+  else
+    self.btnSave:SetDisabled(false);
+  end
 end

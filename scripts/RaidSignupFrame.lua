@@ -42,6 +42,8 @@ function RaidSignupFrame:OpenDay(dateStr, dateLabel)
       self.btnEdit:SetDisabled(true);
     end
   else
+    self.raidData = nil;
+    self.dropdownRaids:SetValue(nil);
     self.btnEdit:SetDisabled(true);
   end
   self.btnCreate:SetDisabled(not RaidCalendar:CanEditRaids());
@@ -189,12 +191,12 @@ function RaidSignupFrame:ShowTabPlayers(players)
   end
   local labelStatus = AceGUI:Create("Label");
   labelStatus:SetText(L["FRAME_SIGNUP_STATUS"]);
-  labelStatus:SetWidth(48);
+  labelStatus:SetWidth(56);
   labelStatus:SetHeight(24);
   labelStatus:SetFont("Fonts\\FRIZQT__.TTF", 14)
   local labelCharacter = AceGUI:Create("Label");
   labelCharacter:SetText(L["FRAME_SIGNUP_CHAR"]);
-  labelCharacter:SetWidth(140);
+  labelCharacter:SetWidth(132);
   labelCharacter:SetHeight(24);
   labelCharacter:SetFont("Fonts\\FRIZQT__.TTF", 14)
   local labelRole = AceGUI:Create("Label");
@@ -248,13 +250,17 @@ function RaidSignupFrame:ShowTabPlayers(players)
         valueNumber:SetText(signupIndex);
         valueNumber:SetWidth(32);
         valueNumber:SetFullHeight(true);
-        valueNumber:SetFont("Fonts\\FRIZQT__.TTF", 14);
+        valueNumber:SetFont("Fonts\\FRIZQT__.TTF", 10);
         numberOrCheckbox = valueNumber;
+      end
+      local identStatus = signupPlayer.status;
+      if (signupPlayer.confirmed) then
+        identStatus = "CONFIRMED";
       end
       local valueStatus = AceGUI:Create("Label");
       local valueStatusColor = RaidCalendar:GetColorHex(RaidCalendar.statusColors[signupPlayer.status]);
-      valueStatus:SetText(valueStatusColor..L["STATUS_SHORT_"..signupPlayer.status]);
-      valueStatus:SetWidth(48);
+      valueStatus:SetText(valueStatusColor..L["STATUS_SHORT_"..identStatus]);
+      valueStatus:SetWidth(56);
       valueStatus:SetFullHeight(true);
       valueStatus:SetFont("Fonts\\FRIZQT__.TTF", 10)
       tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_STATUS"]..": "..valueStatusColor..L["STATUS_"..signupPlayer.status].."\n";
@@ -274,9 +280,9 @@ function RaidSignupFrame:ShowTabPlayers(players)
       end
       valueCharacter:SetColor(charColor.r, charColor.g, charColor.b);
       valueCharacter:SetText(signupPlayer.character);
-      valueCharacter:SetWidth(116);
+      valueCharacter:SetWidth(108);
       valueCharacter:SetFullHeight(true);
-      valueCharacter:SetFont("Fonts\\FRIZQT__.TTF", 14);
+      valueCharacter:SetFont("Fonts\\FRIZQT__.TTF", 10);
       tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_CHAR"]..": "..RaidCalendar:GetColorHex(charColor)
         ..signupPlayer.character.." / "..signupPlayer.level.." "..classText.."\n";
       local iconRole = AceGUI:Create("Icon");
@@ -288,12 +294,12 @@ function RaidSignupFrame:ShowTabPlayers(players)
       valueRole:SetText(L["ROLE_"..signupPlayer.role]);
       valueRole:SetWidth(116);
       valueRole:SetFullHeight(true);
-      valueRole:SetFont("Fonts\\FRIZQT__.TTF", 14)
+      valueRole:SetFont("Fonts\\FRIZQT__.TTF", 10)
       tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_ROLE"]..": |cffffff80"..L["ROLE_"..signupPlayer.role].."\n";
       local valueNotes = AceGUI:Create("InteractiveLabel");
       valueNotes:SetText( strsub(signupPlayer.notes, 0, 8).."..." );
       valueNotes:SetWidth(116);
-      valueNotes:SetFont("Fonts\\FRIZQT__.TTF", 14)
+      valueNotes:SetFont("Fonts\\FRIZQT__.TTF", 10)
       local tableRow = AceGUI:Create("SimpleGroup");
       tableRow:SetLayout("Flow");
       tableRow:SetWidth(476 + 16);
