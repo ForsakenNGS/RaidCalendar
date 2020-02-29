@@ -110,9 +110,10 @@ function AceCommPeer:AddSyncPacket(groupId, type, data, timestamp, expires, sour
 	};
 	self.syncDb.factionrealm.groups[groupId].packets[packetId] = packet;
 	-- Debug
-	self:Print("Added packet: "..packetId);
+	self:Debug("Added packet: "..packetId);
 	-- Broadcast if own
-	if (sender == charName) then
+	if (sender == self.charName) then
+	  self:Debug("Broadcasting packet: "..packetId);
 		self:SyncBroadcastPackets(groupId, { packetId });
 	end
   -- Send update event
@@ -406,10 +407,16 @@ function AceCommPeer:SyncRequestGroup(groupId, distribution, target)
 end
 
 function AceCommPeer:SyncBroadcastPackets(groupId, ids)
+  local group = self.syncDb.factionrealm.groups[groupId];
+  if (group == nil) then
+    -- Group not known!
+    return;
+  end
 	for index, channel in ipairs(self.syncChannels) do
 		if (channel == "WHISPER") then
 			-- Whisper peers (friends?)
 			for index, charName in ipairs(group.peers) do
+        local syncPeer = self.syncDb.factionrealm.peers[charName];
 				if (syncPeer.guild == nil) or (syncPeer.guild ~= self.charDetails.guild) then
           if (syncPeer.online) then
             self:SyncSendPackets(groupId, ids, "WHISPER", charName);
@@ -433,6 +440,7 @@ function AceCommPeer:SyncSendPackets(groupId, ids, distribution, target)
   end
   if not self:SyncPeerCheck(group, distribution, target) then
     -- Target not qualified to receive packets from this group
+    self:Debug("Not qualified to receive packet for group '"..groupId.."': "..distribution, target);
     return;
   end
   -- Send packets to peer
@@ -451,7 +459,7 @@ function AceCommPeer:SyncSendGroup(groupId, distribution, target)
   end
   if not self:SyncPeerCheck(group, distribution, target) then
     -- Target not qualified to receive packets from this group
-    self:Debug("Not qualified to receive information about group '"..groupId.."': "..distribution.." / "..target);
+    self:Debug("Not qualified to receive information about group '"..groupId.."': "..distribution, target);
     return;
   end
   -- Send group data to peer
