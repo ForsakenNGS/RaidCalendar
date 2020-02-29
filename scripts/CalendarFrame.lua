@@ -5,7 +5,7 @@ RaidCalendarFrame = AceGUI:Create("Frame");
 RaidCalendarFrame:SetTitle(L["TITLE"]);
 RaidCalendarFrame:SetLayout("Flow");
 RaidCalendarFrame:SetWidth(600);
-RaidCalendarFrame:SetHeight(520);
+RaidCalendarFrame:SetHeight(540);
 RaidCalendarFrame.sizer_se:Hide();
 RaidCalendarFrame.sizer_s:Hide();
 RaidCalendarFrame.sizer_e:Hide();
@@ -52,7 +52,7 @@ for week = 1, 6 do
   for day = 1, 7 do
     local frameDay = AceGUI:Create("CalendarDay");
     frameDay:SetWidth(80);
-    frameDay:SetHeight(60);
+    frameDay:SetHeight(64);
     frameDay:SetDay("?");
     frameDay:SetText("...");
     frameDay:SetCallback("OnClick", function(widget, event, button) RaidCalendarFrame:OnClickDay(widget, button) end);

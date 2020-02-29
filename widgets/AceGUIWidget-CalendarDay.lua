@@ -110,7 +110,7 @@ local function Constructor()
 	textContent:SetJustifyV("TOP");
 	textContent:SetNonSpaceWrap(true);
 	textContent:SetPoint("TOPLEFT", 4, -16);
-	textContent:SetPoint("BOTTOMRIGHT", 4, -2);
+	textContent:SetPoint("BOTTOMRIGHT", -4, -2);
 
 	local widget = {
 		frame = frame, text  = text, type  = Type,

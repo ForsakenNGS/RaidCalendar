@@ -263,7 +263,12 @@ function RaidSignupFrame:ShowTabPlayers(players)
       valueStatus:SetWidth(56);
       valueStatus:SetFullHeight(true);
       valueStatus:SetFont("Fonts\\FRIZQT__.TTF", 10)
-      tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_STATUS"]..": "..valueStatusColor..L["STATUS_"..signupPlayer.status].."\n";
+      tooltip = tooltip.."|cffffffff"..L["FRAME_SIGNUP_STATUS"]..": "..valueStatusColor..L["STATUS_"..signupPlayer.status];
+      if (signupPlayer.confirmed) then
+        tooltip = tooltip.." ("..L["STATUS_SHORT_CONFIRMED"]..")\n";
+      else
+        tooltip = tooltip.."\n";
+      end
       local iconCharacter = AceGUI:Create("Icon");
       local classText = "";
       if (signupPlayer.class) then
