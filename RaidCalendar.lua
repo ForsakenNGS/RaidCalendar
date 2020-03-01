@@ -117,7 +117,7 @@ function RaidCalendar:OnInitialize()
     HUNTER = "interface\\icons\\inv_weapon_bow_07",
     WARLOCK = "interface\\icons\\spell_nature_faeriefire",
     PRIEST = "interface\\icons\\inv_staff_30",
-    PALADIN = "interface\\icons\\spell_holy_holysmite",
+    PALADIN = "interface\\icons\\INV_Hammer_02",
     MAGE = "interface\\icons\\inv_staff_13",
     ROGUE = "interface\\icons\\inv_throwingknife_04",
     DRUID = "interface\\icons\\ability_druid_maul",
@@ -125,12 +125,12 @@ function RaidCalendar:OnInitialize()
     WARRIOR = "interface\\icons\\inv_sword_27"
   };
   self.roleIcons = {
-    TANK = "interface\\icons\\inv_shield_01",
-    CASTER = "interface\\icons\\inv_staff_06",
+    TANK = "interface\\icons\\INV_Shield_04",
+    CASTER = "interface\\icons\\inv_staff_07",
     AUTOATTACKER = "interface\\icons\\inv_sword_25",
     HEALER = "interface\\icons\\spell_nature_healingtouch",
     FLEX_TANK = "interface\\icons\\ability_racial_bearform.png",
-    FLEX_HEAL = "interface\\icons\\spell_nature_healingwavelesser"
+    FLEX_HEAL = "interface\\icons\\inv_staff_14"
   };
   -- EVENTS
   self:RegisterMessage("SYNC_DEBUG", "OnSyncDebug")
