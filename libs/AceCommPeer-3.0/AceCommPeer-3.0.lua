@@ -182,6 +182,7 @@ function AceCommPeer:CreateSyncGroup(title, guild, peers, owner, id, confirmed, 
       group.guild = guild;
       group.peers = peers;
       group.operators = operators;
+      group.updated = self:GetSyncTime();
     end
     return;
   end
@@ -563,9 +564,12 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       local groupId = messageData.group;
       local group = self.syncDb.factionrealm.groups[groupId];
       if (group ~= nil) then
-        if (group.owner == sender) and not group.confirmed then
-          -- Group not confirmed, request from owner
-          self:SyncRequestGroup(groupId, "WHISPER", sender);
+        if (group.owner == sender) then
+          local groupUpdate = self.GetSyncTime() - 3600; -- Allow update once an hour
+          if not group.confirmed or (group.updated < groupUpdate) then
+            -- Group not confirmed (or update is due) - request from owner
+            self:SyncRequestGroup(groupId, "WHISPER", sender);
+          end
         end
         -- Sync packets
         local timeNow = self:GetSyncTime();
@@ -639,6 +643,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       if (messageData.groupData ~= nil) then
         if (messageData.groupData.owner == self.charName) then
           -- Do not allow faking groups
+          return;
         end
         local groupConfirmed = (sender == messageData.groupData.owner);
         self:CreateSyncGroup(
