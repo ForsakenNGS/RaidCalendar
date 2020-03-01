@@ -36,20 +36,20 @@ labelGroupTime:AddChild(labelEnd);
 RaidCreateFrame:AddChild(labelGroupTime);
 
 local editInvite = AceGUI:Create("EditBox");
+editInvite:DisableButton(true);
 editInvite:SetText("18:30");
 editInvite:SetWidth(140);
 editInvite:SetHeight(24);
-editInvite:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnInviteChanged(widget, text) end);
 local editStart = AceGUI:Create("EditBox");
+editStart:DisableButton(true);
 editStart:SetText("19:00");
 editStart:SetWidth(140);
 editStart:SetHeight(24);
-editStart:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnStartChanged(widget, text) end);
 local editEnd = AceGUI:Create("EditBox");
+editEnd:DisableButton(true);
 editEnd:SetText("22:00");
 editEnd:SetWidth(140);
 editEnd:SetHeight(24);
-editEnd:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnEndChanged(widget, text) end);
 local editGroupTime = AceGUI:Create("SimpleGroup");
 editGroupTime:SetLayout("Flow");
 editGroupTime:SetFullWidth(true);
@@ -94,9 +94,9 @@ editRaidGroup:SetWidth(140);
 editRaidGroup:SetHeight(24);
 editRaidGroup:SetCallback("OnValueChanged", function(widget, event, key) RaidCreateFrame:OnRaidGroupChanged(widget, key) end);
 local editComment = AceGUI:Create("EditBox");
+editComment:DisableButton(true);
 editComment:SetWidth(140);
 editComment:SetHeight(24);
-editComment:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnCommentChanged(widget, text) end);
 editComment:DisableButton(true);
 local editGroupRaid = AceGUI:Create("SimpleGroup");
 editGroupRaid:SetLayout("Flow");
@@ -111,10 +111,10 @@ RaidCreateFrame.editComment = editComment;
 RaidCreateFrame:AddChild(editGroupRaid);
 
 local editDetails = AceGUI:Create("MultiLineEditBox");
+editComment:DisableButton(true);
 editDetails:SetLabel(L["FRAME_GENERIC_DESCRIPTION"]);
 editDetails:SetFullWidth(true);
 editDetails:SetNumLines(8);
-editDetails:SetCallback("OnEnterPressed", function(widget, event, text) RaidCreateFrame:OnDetailsChanged(widget, text) end);
 editDetails.button:Hide();
 RaidCreateFrame.editDetails = editDetails;
 RaidCreateFrame:AddChild(editDetails);
@@ -210,18 +210,6 @@ function RaidCreateFrame:SetDateStr(dateStr)
   end
 end
 
-function RaidCreateFrame:OnInviteChanged(widget, value)
-  self.raidData.timeInvite = value;
-end
-
-function RaidCreateFrame:OnStartChanged(widget, value)
-  self.raidData.timeStart = value;
-end
-
-function RaidCreateFrame:OnEndChanged(widget, value)
-  self.raidData.timeEnd = value;
-end
-
 function RaidCreateFrame:OnRaidChanged(widget, key)
   self.raidData.instance = key;
 end
@@ -231,15 +219,10 @@ function RaidCreateFrame:OnRaidGroupChanged(widget, key)
   self:Validate();
 end
 
-function RaidCreateFrame:OnCommentChanged(widget, value)
-  self.raidData.comment = value;
-end
-
-function RaidCreateFrame:OnDetailsChanged(widget, value)
-  self.raidData.details = value;
-end
-
 function RaidCreateFrame:OnSave(widget)
+  self.raidData.timeInvite = self.editInvite:GetText();
+  self.raidData.timeStart = self.editStart:GetText();
+  self.raidData.timeEnd = self.editEnd:GetText();
   self.raidData.comment = self.editComment:GetText();
   self.raidData.details = self.editDetails:GetText();
   if (self.raidData.id == nil) then
