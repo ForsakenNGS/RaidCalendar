@@ -132,7 +132,7 @@ function AceCommPeer:AddSyncPeer(groupId, peerName)
   end
   if not tContains(group.peers, peerName) then
     tinsert(group.peers, peerName);
-    -- TODO: Update event?
+    self:SyncSendGroup(groupId);
   end
 end
 
@@ -204,7 +204,7 @@ function AceCommPeer:DeleteSyncPeer(groupId, peerName)
   for index, charName in ipairs(group.peers) do
     if (charName == peerName) then
       tremove(group.peers, index);
-      -- TODO: Update event?
+      self:SyncSendGroup(groupId);
       return;
     end
   end
@@ -484,6 +484,15 @@ function AceCommPeer:SyncSendGroup(groupId, distribution, target)
   if (group == nil) then
     -- Group not known!
     return;
+  end
+  if (distribution == nil) then
+    self:SyncSendGroup(groupId, "GUILD");
+    for index, charName in ipairs(group.peers) do
+      local syncPeer = self.syncDb.factionrealm.peers[charName];
+      if (syncPeer ~= nil) and (syncPeer.guild ~= self.charDetails.guild) then
+        self:SyncSendGroup(groupId, "WHISPER", charName);
+      end
+    end
   end
   if not self:SyncPeerCheck(group, distribution, target) then
     -- Target not qualified to receive packets from this group
