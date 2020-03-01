@@ -68,6 +68,7 @@ L["FRAME_GENERIC_DESCRIPTION"] = "Description";
 L["FRAME_GENERIC_SAVE"] = "Save";
 L["FRAME_GENERIC_DELETE"] = "Delete";
 L["FRAME_GENERIC_CREATED_BY"] = "Created by";
+L["FRAME_GENERIC_ADD"] = "Add";
 
 L["FRAME_GROUPS_TITLE"] = "Raid groups";
 L["FRAME_GROUPS_PEERS"] = "Peers";
@@ -78,6 +79,8 @@ L["FRAME_GROUP_CREATE_TYPE"] = "Group type";
 L["FRAME_GROUP_CREATE_TYPE_PERSONAL"] = "Personal";
 L["FRAME_GROUP_CREATE_TYPE_GUILD"] = "Guild group";
 L["FRAME_GROUP_CREATE_TITLE"] = "Raid group name";
+
+L["FRAME_GROUP_PEERS_HEADER"] = "Players";
 
 L["FRAME_CREATE_TITLE"] = "Create/Edit Raid";
 L["FRAME_CREATE_TITLE_NEW"] = "Create new Raid";

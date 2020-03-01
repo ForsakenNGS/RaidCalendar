@@ -124,6 +124,18 @@ function AceCommPeer:AddSyncPacket(groupId, type, data, timestamp, expires, sour
 	return packetId;
 end
 
+function AceCommPeer:AddSyncPeer(groupId, peerName)
+  local group = self.syncDb.factionrealm.groups[groupId];
+  if (group == nil) then
+    -- Group unknown
+    return;
+  end
+  if not tContains(group.peers, peerName) then
+    tinsert(group.peers, peerName);
+    -- TODO: Update event?
+  end
+end
+
 function AceCommPeer:CreateSyncGroup(title, guild, peers, owner, id, confirmed, enabled, operators)
   -- Owner
   if (owner == nil) then
@@ -180,6 +192,21 @@ function AceCommPeer:CreateSyncGroup(title, guild, peers, owner, id, confirmed, 
     packets = {}, peers = peers, operators = operators
   };
   self.syncDb.factionrealm.groups[id] = group;
+end
+
+function AceCommPeer:DeleteSyncPeer(groupId, peerName)
+  local group = self.syncDb.factionrealm.groups[groupId];
+  if (group == nil) then
+    -- Group unknown
+    return;
+  end
+  for index, charName in ipairs(group.peers) do
+    if (charName == peerName) then
+      tremove(group.peers, index);
+      -- TODO: Update event?
+      return;
+    end
+  end
 end
 
 function AceCommPeer:DeleteSyncGroup(groupId)
@@ -579,9 +606,8 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
     elseif (messageData.type == "SyncRequest") then
       local group = self.syncDb.factionrealm.groups[messageData.group];
       if (group ~= nil) and (group.owner == self.charName) then
-          if not tContains(group.peers, sender) and self:SyncPeerCheck(group, "WHISPER", sender) then
-            tinsert(group.peers, sender);
-            -- TODO: Update event?
+          if self:SyncPeerCheck(group, "WHISPER", sender) then
+            self:AddSyncPeer(messageData.group, sender);
           end
       end
       if (messageData.packetIds ~= nil) then
@@ -706,7 +732,9 @@ end
 
 local mixins = {
 	"AddSyncPacket",
+  "AddSyncPeer",
   "CreateSyncGroup",
+  "DeleteSyncPeer",
   "DeleteSyncGroup",
 	"GetSyncDbDefaults",
 	"GetSyncTime",

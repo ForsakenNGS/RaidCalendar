@@ -42,11 +42,11 @@ function RaidGroupsFrame:CreateGroupFrame(groupData)
   end);
   -- NAME
   checkbox:SetLabel(groupData.title);
-  checkbox:SetWidth(260);
+  checkbox:SetWidth(240);
   -- PEERS
   local labelPeers = AceGUI:Create("Label");
   labelPeers:SetText("|cffffff80"..#(groupData.peers).." "..L["FRAME_GROUPS_PEERS"]);
-  labelPeers:SetWidth(140);
+  labelPeers:SetWidth(64);
   labelPeers:SetFont("Fonts\\FRIZQT__.TTF", 14)
   -- GROUP TYPE/TITLE
   local labelRow = AceGUI:Create("SimpleGroup");
@@ -57,13 +57,20 @@ function RaidGroupsFrame:CreateGroupFrame(groupData)
   labelRow:AddChild(labelPeers);
   -- DELETE BUTTON
   if (groupData.owner == UnitName("player")) then
+    local buttonPlayers = AceGUI:Create("Button");
+    buttonPlayers:SetText(L["FRAME_GROUP_PEERS_HEADER"]);
+    buttonPlayers:SetWidth(120);
+    buttonPlayers:SetCallback("OnClick", function()
+      RaidGroupPeerFrame:OpenGroup(groupData);
+    end);
     local buttonDelete = AceGUI:Create("Button");
     buttonDelete:SetText(L["FRAME_GROUPS_DELETE"]);
-    buttonDelete:SetWidth(140);
+    buttonDelete:SetWidth(120);
     buttonDelete:SetCallback("OnClick", function()
       RaidCalendar:DeleteSyncGroup(groupData.id);
       RaidGroupsFrame:UpdateGroups();
     end);
+    labelRow:AddChild(buttonPlayers);
     labelRow:AddChild(buttonDelete);
   end
   return labelRow;

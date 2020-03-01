@@ -23,4 +23,5 @@
   <Script file="scripts\RaidSignupFrame.lua"/>
   <Script file="scripts\RaidGroupCreateFrame.lua"/>
   <Script file="scripts\RaidGroupsFrame.lua"/>
+  <Script file="scripts\RaidGroupPeersFrame.lua"/>
 </Ui>
