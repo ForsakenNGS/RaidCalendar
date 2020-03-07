@@ -322,10 +322,8 @@ function AceCommPeer:SyncPeers()
 			-- Whisper peers (friends?)
 			for charName, syncPeer in pairs(self.syncDb.factionrealm.peers) do
 				if (syncPeer.guild == nil) or (syncPeer.guild ~= self.charDetails.guild) then
-          if (syncPeer.online) then
+          if (self:SyncPeerAvailable(charName)) then
   					self:SyncPeer("WHISPER", charName);
-          else
-            -- TODO Recheck online status if last update was time X ago?
           end
 				end
 			end
@@ -349,21 +347,7 @@ function AceCommPeer:SyncGroup(groupId)
       tinsert(messageData.known, id);
     end
   end
-  if (group.guild ~= nil) and (group.guild == self.charDetails.guild) then
-    -- Report to guild
-    self:SyncSend(messageData, "GUILD");
-  end
-  -- Whisper peers (friends?)
-  for charName, syncPeer in pairs(group.peers) do
-    if (syncPeer.guild == nil) or (syncPeer.guild ~= self.charDetails.guild) then
-      if (syncPeer.online) then
-        self:SyncSend(messageData, "WHISPER", charName);
-      else
-        -- TODO Recheck online status if last update was time X ago?
-      end
-    end
-  end
-  return true;
+  self:SyncSendGroup(groupId, messageData);
 end
 
 function AceCommPeer:SyncPeer(distribution, target)
@@ -413,6 +397,43 @@ function AceCommPeer:SyncPeerCheck(group, distribution, target)
   end
 end
 
+function AceCommPeer:SyncPeerAdd(charName, distribution, online)
+  if (online == nil) then
+    online = false;
+  end
+	if self.syncDb.factionrealm.peers[charName] then
+		self.syncDb.factionrealm.peers[charName].online = online;
+		self.syncDb.factionrealm.peers[charName].updated = self:GetSyncTime();
+	else
+    self.syncDb.factionrealm.peers[charName] = {
+      friend = false, guild = false, online = online, updated = self:GetSyncTime()
+    };
+	end
+	if (distribution == "GUILD") then
+		self.syncDb.factionrealm.peers[charName].guild = GetGuildInfo("player");
+	end
+end
+
+function AceCommPeer:SyncPeerAvailable(charName)
+	if self.syncDb.factionrealm.peers[charName] then
+    local syncPeer = self.syncDb.factionrealm.peers[charName];
+    local peerUpdate = self:GetSyncTime() - 300; -- Allow update once every 5min
+    if (syncPeer.updated == false) or (syncPeer.updated < peerUpdate) then
+      self:Debug("Peer "..charName.." updated", (peerUpdate - syncPeer.updated));
+      local messageData = { type = "SyncPing", time = self:GetSyncTime() };
+      self:SyncSend(messageData, "WHISPER", charName);
+    end
+  else
+		self.syncDb.factionrealm.peers[charName] = {
+			friend = false, guild = false, online = false, updated = false
+		};
+    -- Send ping to check if player is online
+    local messageData = { type = "SyncPing", time = self:GetSyncTime() };
+    self:SyncSend(messageData, "WHISPER", charName);
+	end
+	return self.syncDb.factionrealm.peers[charName].online;
+end
+
 function AceCommPeer:SyncSend(messageData, distribution, target)
   -- Serialize and send
   local message = self:Serialize(messageData);
@@ -422,6 +443,42 @@ function AceCommPeer:SyncSend(messageData, distribution, target)
     target = "nil";
   end
 	self:SyncDebug(messageData.type.." @ "..distribution.." / "..target..": "..serializeTable(messageData, "data", true));
+end
+
+function AceCommPeer:SyncSendGroup(groupId, messageData, distribution, target)
+  local group = self.syncDb.factionrealm.groups[groupId];
+  if (group == nil) then
+    -- Group not known!
+    return;
+  end
+  if (messageData == nil) then
+    -- Send group data by default if no message data was given
+    messageData = { type = "SyncData", group = groupId, groupData = {
+      title = group.title, guild = group.guild, peers = group.peers,
+      owner = group.owner, operators = group.operators
+    } };
+  end
+  if (distribution == nil) then
+    -- Target not supplied, send to all peers within the given group
+    self:SyncSendGroup(groupId, messageData, "GUILD");
+    for index, charName in ipairs(group.peers) do
+      local syncPeer = self.syncDb.factionrealm.peers[charName];
+      if (syncPeer ~= nil) and (syncPeer.guild ~= self.charDetails.guild) then
+        if (self:SyncPeerAvailable(charName)) then
+          self:SyncSendGroup(groupId, messageData, "WHISPER", charName);
+        end
+      end
+    end
+    return;
+  end
+  -- Permission check
+  if not self:SyncPeerCheck(group, distribution, target) then
+    -- Target not qualified to receive packets from this group
+    self:Debug("Not qualified to receive information about group '"..groupId.."': "..distribution, target);
+    return;
+  end
+  -- Send message
+  self:SyncSend(messageData, distribution, target);
 end
 
 function AceCommPeer:SyncRequestPackets(groupId, ids, distribution, target)
@@ -446,10 +503,8 @@ function AceCommPeer:SyncBroadcastPackets(groupId, ids)
 			for index, charName in ipairs(group.peers) do
         local syncPeer = self.syncDb.factionrealm.peers[charName];
 				if (syncPeer.guild == nil) or (syncPeer.guild ~= self.charDetails.guild) then
-          if (syncPeer.online) then
+          if (self:SyncPeerAvailable(charName)) then
             self:SyncSendPackets(groupId, ids, "WHISPER", charName);
-          else
-            -- TODO Recheck online status if last update was time X ago?
           end
 				end
 			end
@@ -466,50 +521,17 @@ function AceCommPeer:SyncSendPackets(groupId, ids, distribution, target)
     -- Group not known!
     return;
   end
-  if not self:SyncPeerCheck(group, distribution, target) then
-    -- Target not qualified to receive packets from this group
-    self:Debug("Not qualified to receive packet for group '"..groupId.."': "..distribution, target);
-    return;
-  end
   -- Send packets to peer
   local messageData = { type = "SyncData", group = groupId, packets = {} };
   for index, id in ipairs(ids) do
     messageData.packets[id] = group.packets[id];
   end
-  self:SyncSend(messageData, distribution, target);
-end
-
-function AceCommPeer:SyncSendGroup(groupId, distribution, target)
-  local group = self.syncDb.factionrealm.groups[groupId];
-  if (group == nil) then
-    -- Group not known!
-    return;
-  end
-  if (distribution == nil) then
-    self:SyncSendGroup(groupId, "GUILD");
-    for index, charName in ipairs(group.peers) do
-      local syncPeer = self.syncDb.factionrealm.peers[charName];
-      if (syncPeer ~= nil) and (syncPeer.guild ~= self.charDetails.guild) then
-        self:SyncSendGroup(groupId, "WHISPER", charName);
-      end
-    end
-  end
-  if not self:SyncPeerCheck(group, distribution, target) then
-    -- Target not qualified to receive packets from this group
-    self:Debug("Not qualified to receive information about group '"..groupId.."': "..distribution, target);
-    return;
-  end
-  -- Send group data to peer
-  local messageData = { type = "SyncData", group = groupId, groupData = {
-    title = group.title, guild = group.guild, peers = group.peers,
-    owner = group.owner, operators = group.operators
-  } };
-  self:SyncSend(messageData, distribution, target);
+  self:SyncSendGroup(groupId, messageData, distribution, target);
 end
 
 function AceCommPeer:SyncConfirm(groupId, id, packet)
   local messageData = { type = "SyncConfirm", group = groupId, id = id, data = packet.data };
-  self:SyncSend(messageData, "WHISPER", packet.source);
+  self:SyncSendGroup(groupId, messageData, "WHISPER", packet.source);
 end
 
 function AceCommPeer:SyncUpdateVerification(groupId, id)
@@ -531,32 +553,6 @@ function AceCommPeer:SyncUpdateVerification(groupId, id)
   end
 end
 
-function AceCommPeer:SyncPeerAdd(charName, distribution)
-	if not self.syncDb.factionrealm.peers[charName] then
-		self.syncDb.factionrealm.peers[charName] = {
-			friend = false, guild = false, online = true, updated = self:GetSyncTime()
-		};
-	else
-		self.syncDb.factionrealm.peers[charName].updated = self:GetSyncTime();
-	end
-	if (distribution == "GUILD") then
-		self.syncDb.factionrealm.peers[charName].guild = GetGuildInfo("player");
-	end
-end
-
-function AceCommPeer:SyncPeerAvailable(charName)
-	if not self.syncDb.factionrealm.peers[charName] then
-		self.syncDb.factionrealm.peers[charName] = {
-			friend = false, guild = false, online = false, updated = false
-		};
-    -- Send ping to check if player is online
-    local messageData = { type = "SyncPing", time = self:GetSyncTime() };
-    self:SyncSend(messageData, "WHISPER", charName);
-	end
-	-- TODO Update online status?
-	return self.syncDb.factionrealm.peers[charName].online;
-end
-
 --------------------------------------------------------------------------------
 -- Handle comm events                                                         --
 --------------------------------------------------------------------------------
@@ -568,7 +564,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       return;
     end
   	self:SyncDebug(messageData.type.." @ "..distribution.." / "..sender..": "..serializeTable(messageData, "data", true));
-    self:SyncPeerAdd(sender, distribution);
+    self:SyncPeerAdd(sender, distribution, true);
     if (messageData.type == "SyncReport") then
       local groupId = messageData.group;
       local group = self.syncDb.factionrealm.groups[groupId];
@@ -632,7 +628,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
           self:DeleteSyncGroup(messageData.group);
         else
           -- Group is not known to player, send the group details!
-          self:SyncSendGroup(messageData.group, "WHISPER", sender);
+          self:SyncSendGroup(messageData.group, nil, "WHISPER", sender);
         end
       end
     elseif (messageData.type == "SyncData") then
@@ -681,7 +677,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
     elseif (messageData.type == "SyncPing") then
       self:SyncSend({ type = "SyncPong", time = self:GetSyncTime() }, "WHISPER", sender);
     elseif (messageData.type == "SyncPong") then
-      self:SyncPeerAdd(sender, distribution);
+      self:SyncPeerAdd(sender, distribution, true);
     end
   end
 end
@@ -713,18 +709,20 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
     self.charDetails.level = charLevel;
     self.charDetails.class = classFilename;
     self.charDetails.guild = guildName;
-    -- Update sync peers
-		self:SyncPeers();
   end
   if (eventName == "PLAYER_ENTERING_WORLD") or (eventName == "GUILD_ROSTER_UPDATE") then
 		-- Update guild members online
     local guildName = GetGuildInfo("player");
+    self:Debug("Guild peer update: "..guildName);
 		for guildIndex = 1, GetNumGuildMembers() do
-			local name, rankName, rankIndex, level, classDisplayName,
+			local charNameFull, rankName, rankIndex, level, classDisplayName,
 				zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
+      local charName = strsub(charNameFull, 1, strfind(charNameFull, "-") - 1); -- Remove realm from name
 			if (self.syncDb.factionrealm.peers[charName]) then
+        --self:Debug("Guild peer update: "..charName);
 				self.syncDb.factionrealm.peers[charName].online = isOnline;
 				self.syncDb.factionrealm.peers[charName].guild = guildName;
+        self.syncDb.factionrealm.peers[charName].updated = self:GetSyncTime();
 			end
 		end
   end
@@ -733,10 +731,16 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
 		for friendIndex = 1, C_FriendList.GetNumFriends() do
 			local friend = C_FriendList.GetFriendInfoByIndex(friendIndex);
 			if (self.syncDb.factionrealm.peers[friend.name]) then
+        --self:Debug("Friend peer update: "..friend.name);
 				self.syncDb.factionrealm.peers[friend.name].online = friend.connected;
 				self.syncDb.factionrealm.peers[friend.name].friend = true;
+        self.syncDb.factionrealm.peers[friend.name].updated = self:GetSyncTime();
 			end
 		end
+  end
+  if (eventName == "PLAYER_ENTERING_WORLD") then
+    -- Update sync peers (that are not covered by guild / friends list)
+    self:SyncPeers();
   end
 end
 
