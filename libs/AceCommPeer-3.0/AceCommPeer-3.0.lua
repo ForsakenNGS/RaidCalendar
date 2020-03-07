@@ -574,7 +574,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
       local group = self.syncDb.factionrealm.groups[groupId];
       if (group ~= nil) then
         if (group.owner == sender) then
-          local groupUpdate = self.GetSyncTime() - 3600; -- Allow update once an hour
+          local groupUpdate = self:GetSyncTime() - 3600; -- Allow update once an hour
           if not group.confirmed or (group.updated < groupUpdate) then
             -- Group not confirmed (or update is due) - request from owner
             self:SyncRequestGroup(groupId, "WHISPER", sender);
