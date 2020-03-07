@@ -713,18 +713,19 @@ function AceCommPeer:OnEventCommPeer(eventName, ...)
   if (eventName == "PLAYER_ENTERING_WORLD") or (eventName == "GUILD_ROSTER_UPDATE") then
 		-- Update guild members online
     local guildName = GetGuildInfo("player");
-    self:Debug("Guild peer update: "..guildName);
-		for guildIndex = 1, GetNumGuildMembers() do
-			local charNameFull, rankName, rankIndex, level, classDisplayName,
-				zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
-      local charName = strsub(charNameFull, 1, strfind(charNameFull, "-") - 1); -- Remove realm from name
-			if (self.syncDb.factionrealm.peers[charName]) then
-        --self:Debug("Guild peer update: "..charName);
-				self.syncDb.factionrealm.peers[charName].online = isOnline;
-				self.syncDb.factionrealm.peers[charName].guild = guildName;
-        self.syncDb.factionrealm.peers[charName].updated = self:GetSyncTime();
-			end
-		end
+    if (guildName ~= nil) then
+  		for guildIndex = 1, GetNumGuildMembers() do
+  			local charNameFull, rankName, rankIndex, level, classDisplayName,
+  				zone, publicNote, officerNote, isOnline, status, class = GetGuildRosterInfo(guildIndex);
+        local charName = strsub(charNameFull, 1, strfind(charNameFull, "-") - 1); -- Remove realm from name
+  			if (self.syncDb.factionrealm.peers[charName]) then
+          --self:Debug("Guild peer update: "..charName);
+  				self.syncDb.factionrealm.peers[charName].online = isOnline;
+  				self.syncDb.factionrealm.peers[charName].guild = guildName;
+          self.syncDb.factionrealm.peers[charName].updated = self:GetSyncTime();
+  			end
+  		end
+    end
   end
   if (eventName == "PLAYER_ENTERING_WORLD") or (eventName == "FRIENDLIST_UPDATE") then
 		-- Update friends online
