@@ -570,6 +570,7 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
     end
   	self:SyncDebug(messageData.type.." @ "..distribution.." / "..sender..": "..serializeTable(messageData, "data", true));
     self:SyncPeerAdd(sender, distribution, true);
+    local syncPeer = self.syncDb.factionrealm.peers[sender];
     if (messageData.type == "SyncReport") then
       local groupId = messageData.group;
       local group = self.syncDb.factionrealm.groups[groupId];
@@ -580,6 +581,10 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
             -- Group not confirmed (or update is due) - request from owner
             self:SyncRequestGroup(groupId, "WHISPER", sender);
           end
+        end
+        if not tContains(group.peers, sender) and ((syncPeer.guild == nil) or (syncPeer.guild ~= group.guild)) then
+          -- Not a known peer for the group, ignore!
+          return;
         end
         -- Sync packets
         local timeNow = self:GetSyncTime();
@@ -639,6 +644,10 @@ function AceCommPeer:OnCommReceivedPeer(prefix, message, distribution, sender)
     elseif (messageData.type == "SyncData") then
       local group = self.syncDb.factionrealm.groups[messageData.group];
       if (group ~= nil) and (messageData.packets ~= nil) then
+        if not tContains(group.peers, sender) and ((syncPeer.guild == nil) or (syncPeer.guild ~= group.guild)) then
+          -- Not a known peer for the group, ignore!
+          return;
+        end
   			local newPackets = false;
         for id, packet in pairs(messageData.packets) do
           if (group.packets[id] == nil) then
