@@ -418,10 +418,15 @@ function AceCommPeer:SyncPeerAvailable(charName)
 	if self.syncDb.factionrealm.peers[charName] then
     local syncPeer = self.syncDb.factionrealm.peers[charName];
     local peerUpdate = self:GetSyncTime() - 300; -- Allow update once every 5min
-    if (syncPeer.updated == false) or (syncPeer.updated < peerUpdate) then
-      self:Debug("Peer "..charName.." updated", (peerUpdate - syncPeer.updated));
-      local messageData = { type = "SyncPing", time = self:GetSyncTime() };
-      self:SyncSend(messageData, "WHISPER", charName);
+    -- Do not update guild/friend peers via whisper
+    if ((syncPeer.guild == nil) or (syncPeer.guild ~= self.charDetails.guild))
+      and not syncPeer.friend then
+      -- Update every 5min max!
+      if (syncPeer.updated == false) or (syncPeer.updated < peerUpdate) then
+        self:Debug("Peer "..charName.." updated", (peerUpdate - syncPeer.updated));
+        local messageData = { type = "SyncPing", time = self:GetSyncTime() };
+        self:SyncSend(messageData, "WHISPER", charName);
+      end
     end
   else
 		self.syncDb.factionrealm.peers[charName] = {
